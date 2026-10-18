@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="分身体">
+<meta name="theme-color" content="#2b4a7a">
+<title>分身体</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* レイアウト: 上にタイトルと更新時刻、本文は1列(PCでは幅を絞って中央)、下に固定のタブ4つ(ホーム/記録/設定/実行)。スマホ優先 */
+:root {
+  --bg: #f3f2ee; --panel: #fbfaf7; --ink: #1d2433; --mute: #667085; --line: #dedbd2;
+  --accent: #2b4a7a; --on-accent: #ffffff; --gain: #b3382c; --loss: #2563a8;
+  --ok: #2f7a4d; --warn-bg: #fbeeda; --warn-ink: #7a4a05; --err-bg: #f8dcd8; --err-ink: #8a2a20;
+  --c1: #2b4a7a; --c2: #c27a1a; --c3: #8a8f99;
+  --sans: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151922; --panel: #1c212c; --ink: #e6e8ee; --mute: #98a1b2; --line: #2d3443;
+  --accent: #8fb0e6; --on-accent: #101626; --gain: #ef7d70; --loss: #7fb2ee;
+  --ok: #7ccb98; --warn-bg: #3a2c12; --warn-ink: #f0c987; --err-bg: #3f1f1b; --err-ink: #f2a79e;
+  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #151922; --panel: #1c212c; --ink: #e6e8ee; --mute: #98a1b2; --line: #2d3443;
+  --accent: #8fb0e6; --on-accent: #101626; --gain: #ef7d70; --loss: #7fb2ee;
+  --ok: #7ccb98; --warn-bg: #3a2c12; --warn-ink: #f0c987; --err-bg: #3f1f1b; --err-ink: #f2a79e;
+  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6;
+  padding-block: 16px calc(84px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+h2 { font-size: 13px; margin: 0 0 8px; color: var(--mute); letter-spacing: .12em; font-weight: 500; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.gain { color: var(--gain); } .loss { color: var(--loss); } .mute { color: var(--mute); }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; }
+.top p { margin: 0; color: var(--mute); font-size: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); min-width: 0; }
+.row:first-of-type { border-top: 0; }
+.row > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.row > :last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.row .num { white-space: nowrap; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+.card .big { font-size: 20px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.card small { color: var(--mute); display: block; overflow-wrap: anywhere; }
+.note { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.err { background: var(--err-bg); color: var(--err-ink); border-radius: 8px; padding: 10px 12px; overflow-wrap: anywhere; }
+.okmsg { background: var(--panel); border: 1px solid var(--ok); color: var(--ok); border-radius: 8px; padding: 10px 12px; overflow-wrap: anywhere; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--mute); min-width: 0; }
+input, select, textarea, button { font: inherit; color: var(--ink); }
+input, select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; width: 100%; font-size: 16px; }
+textarea { font-family: var(--mono); font-size: 13px; min-height: 52vh; line-height: 1.5; white-space: pre; overflow-x: auto; }
+button { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; cursor: pointer; min-height: 44px; }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.form { display: flex; flex-direction: column; gap: 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.seg button { padding: 10px 4px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); }
+.chip.success { color: var(--ok); border-color: var(--ok); } .chip.failure { color: var(--err-ink); border-color: var(--err-ink); }
+.chip.run { color: var(--warn-ink); border-color: var(--warn-ink); }
+nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+nav button { border: 0; border-radius: 0; background: transparent; min-height: 56px; color: var(--mute); font-size: 13px; }
+nav button[aria-current="page"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 3px 0 var(--accent); }
+.order { display: flex; flex-direction: column; gap: 6px; }
+.order .row { padding: 4px 0; align-items: center; }
+.order .row > :last-child { display: flex; gap: 6px; }
+.order button { min-height: 36px; padding: 4px 10px; }
+svg text { fill: var(--mute); font-family: var(--mono); font-size: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; margin-top: 6px; }
+.legend i { display: inline-block; width: 12px; height: 3px; margin-right: 5px; vertical-align: middle; }
+@media (prefers-reduced-motion: no-preference) { .panel, .card { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav id="tabs" hidden></nav>
+
+<script>
+// ===== 設定の保存(この端末のブラウザだけ。トークンは外に出さない) =====
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 保存できなくても動く */ } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* 同上 */ } },
+};
+const conn = { repo: LS.get("kb.repo") || "sinri-N/kabu-bunshin", token: LS.get("kb.token") || "" };
+const SECTIONS = { summary: "サマリー(3つの数字)", chart: "推移グラフ", accounts: "仮想口座の保有・注文", fills: "最近の約定", real: "実際の保有(記録上)", news: "ニュース注意" };
+const CONFIG_FILES = ["config/paper_config.json", "config/portfolio_config.json", "config/margin_costs.json", "config/live_config.json"];
+let prefs = readPrefs();
+let tab = "home";
+let cache = {};
+
+function readPrefs() {
+  let p = null;
+  try { p = JSON.parse(LS.get("kb.prefs") || "null"); } catch (e) { p = null; }
+  return normalizePrefs(p);
+}
+function normalizePrefs(p) {
+  const known = Object.keys(SECTIONS);
+  const order = ((p && p.order) || []).filter((k) => known.includes(k));
+  known.forEach((k) => { if (!order.includes(k)) order.push(k); });
+  return { order, hidden: ((p && p.hidden) || []).filter((k) => known.includes(k)) };
+}
+
+// ===== 小さな部品 =====
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, "");
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  kids.flat().forEach((c) => { if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c))); });
+  return el;
+}
+const yen = (n) => (n == null || isNaN(n) ? "-" : Math.round(n).toLocaleString("ja-JP") + "円");
+const pct = (n) => (n == null || isNaN(n) ? "-" : (n >= 0 ? "+" : "") + n.toFixed(2) + "%");
+const signCls = (n) => (n > 0 ? "gain" : n < 0 ? "loss" : "");
+const todayJst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+
+// ===== GitHub とのやりとり =====
+async function gh(path, opts = {}) {
+  const res = await fetch(`https://api.github.com/repos/${conn.repo}/${path}`, {
+    ...opts, cache: "no-store",
+    headers: { Authorization: `Bearer ${conn.token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", ...(opts.headers || {}) },
+  });
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) { const e = new Error(body.message || res.statusText); e.status = res.status; throw e; }
+  return body;
+}
+function decodeB64(b64) { const bin = atob(b64.replace(/\n/g, "")); return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))); }
+function encodeB64(text) { let s = ""; new TextEncoder().encode(text).forEach((b) => { s += String.fromCharCode(b); }); return btoa(s); }
+async function getFile(path) {
+  try { const f = await gh(`contents/${path}?ref=main`); return { text: decodeB64(f.content), sha: f.sha }; }
+  catch (e) { if (e.status === 404) return null; throw e; }
+}
+async function putFile(path, text, sha, message) {
+  return gh(`contents/${path}`, { method: "PUT", body: JSON.stringify({ message, content: encodeB64(text), branch: "main", ...(sha ? { sha } : {}) }) });
+}
+function explain(e) {
+  if (e.status === 401) return "トークンが正しくないか、期限が切れています。設定タブで入れ直してください。";
+  if (e.status === 403) return "権限が足りないか、アクセスが多すぎます。トークンの権限(Contents / Actions)を確認してください。";
+  if (e.status === 404) return "リポジトリまたはファイルが見つかりません。リポジトリ名とトークンの対象リポジトリを確認してください。";
+  if (e.status === 409 || e.status === 422) return "他の更新と重なりました。読み込み直してからもう一度お試しください。";
+  return `通信に失敗しました(${e.message})`;
+}
+
+// ===== 画面の骨組み =====
+const app = document.getElementById("app");
+const tabsEl = document.getElementById("tabs");
+const TABS = [["home", "ホーム"], ["record", "記録"], ["config", "設定"], ["run", "実行"]];
+
+function renderTabs() {
+  tabsEl.hidden = !conn.token;
+  tabsEl.replaceChildren(...TABS.map(([id, label]) =>
+    h("button", { "aria-current": tab === id ? "page" : null, onclick: () => { tab = id; render(); window.scrollTo(0, 0); } }, label)));
+}
+function render() {
+  renderTabs();
+  if (!conn.token) return renderConnect();
+  ({ home: renderHome, record: renderRecord, config: renderConfig, run: renderRun })[tab]();
+}
+function head(title, sub) { return h("div", { class: "top" }, h("h1", null, title), sub ? h("p", null, sub) : null); }
+
+// ===== つなぐ(初回) =====
+function renderConnect() {
+  const repo = h("input", { id: "repo", value: conn.repo, autocomplete: "off" });
+  const token = h("input", { id: "token", type: "password", placeholder: "github_pat_...", autocomplete: "off" });
+  const msg = h("div");
+  app.replaceChildren(head("分身体", "最初の設定"),
+    h("div", { class: "panel form" },
+      h("p", { class: "mute", style: "margin:0" }, "GitHubのリポジトリとアクセストークンを入れます。トークンはこの端末のブラウザの中だけに保存され、他には送られません(GitHubとの通信にだけ使います)。"),
+      h("label", null, "リポジトリ(ユーザー名/名前)", repo),
+      h("label", null, "アクセストークン", token),
+      msg,
+      h("button", { class: "primary", onclick: async () => {
+        conn.repo = repo.value.trim(); conn.token = token.value.trim();
+        msg.replaceChildren();
+        try { await gh(""); LS.set("kb.repo", conn.repo); LS.set("kb.token", conn.token); tab = "home"; cache = {}; render(); }
+        catch (e) { conn.token = ""; msg.replaceChildren(h("div", { class: "err" }, explain(e))); }
+      } }, "つなぐ")));
+}
+
+// ===== ホーム =====
+async function loadHome() {
+  const [dash, real, prefFile] = await Promise.all([getFile("data/dashboard.html"), getFile("data/portfolio_state.json"), getFile("data/app_prefs.json")]);
+  let D = null;
+  if (dash) { const m = dash.text.match(/const D = (\{.*\});/); if (m) { try { D = JSON.parse(m[1]); } catch (e) { D = null; } } }
+  let realState = null;
+  if (real) { try { realState = JSON.parse(real.text); } catch (e) { realState = null; } }
+  if (prefFile) { try { prefs = normalizePrefs(JSON.parse(prefFile.text)); LS.set("kb.prefs", JSON.stringify(prefs)); } catch (e) { /* 壊れていたら今の設定のまま */ } }
+  cache = { D, realState, prefSha: prefFile ? prefFile.sha : null };
+}
+async function renderHome() {
+  app.replaceChildren(head("ホーム", "読み込み中..."));
+  try { await loadHome(); } catch (e) { app.replaceChildren(head("ホーム"), h("div", { class: "err" }, explain(e)), h("button", { onclick: render }, "再読み込み")); return; }
+  const { D } = cache;
+  const nodes = [head("ホーム", D ? `更新 ${D.updated}(処理済み ${D.last_processed || "-"})` : "まだデータがありません")];
+  prefs.order.filter((k) => !prefs.hidden.includes(k)).forEach((k) => { const n = SECTION_RENDER[k](); if (n) nodes.push(n); });
+  nodes.push(h("div", { class: "actions" },
+    h("button", { onclick: render }, "再読み込み"), h("button", { onclick: renderLayoutEditor }, "表示をカスタマイズ")));
+  app.replaceChildren(...nodes);
+}
+const SECTION_RENDER = {
+  summary() {
+    const D = cache.D; if (!D) return h("div", { class: "note" }, "まとめのデータがまだありません。実行タブから日次処理を動かすと表示されます。");
+    const cards = D.accounts.map((a) => h("div", { class: "card" }, h("small", null, a.label),
+      h("div", { class: "big" }, yen(a.value)), h("span", { class: `num ${signCls(a.cumulative)}` }, pct(a.cumulative)),
+      h("small", null, `前日比 ${a.day_pnl >= 0 ? "+" : ""}${Math.round(a.day_pnl).toLocaleString("ja-JP")}円`)));
+    cards.push(h("div", { class: "card" }, h("small", null, D.benchmark.label), h("div", { class: "big" }, yen(D.benchmark.value)),
+      h("span", { class: `num ${signCls(D.benchmark.cumulative)}` }, pct(D.benchmark.cumulative))));
+    return h("div", { class: "cards" }, cards);
+  },
+  chart() {
+    const D = cache.D; if (!D) return null;
+    const keys = Object.keys(D.series).filter((k) => D.series[k].length); if (!keys.length) return null;
+    const W = 640, H = 220, L = 40, R = 10, T = 10, B = 24;
+    const dates = [...new Set(keys.flatMap((k) => D.series[k].map((p) => p[0])))].sort();
+    const vals = keys.flatMap((k) => D.series[k].map((p) => p[1]));
+    let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals); if (hi - lo < 1) { hi += 0.5; lo -= 0.5; }
+    const x = (d) => L + (dates.length < 2 ? 0 : (dates.indexOf(d) / (dates.length - 1)) * (W - L - R));
+    const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    const NS = "http://www.w3.org/2000/svg", s = (t, a) => { const e = document.createElementNS(NS, t); Object.entries(a).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
+    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": "累積損益率の推移" });
+    for (let i = 0; i <= 4; i++) { const v = lo + ((hi - lo) * i) / 4;
+      svg.append(s("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)", "stroke-width": 1 }));
+      const t = s("text", { x: L - 4, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v.toFixed(1) + "%"; svg.append(t); }
+    const zero = s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "3 3" }); svg.append(zero);
+    const colors = ["var(--c1)", "var(--c2)", "var(--c3)"];
+    keys.forEach((k, i) => { const pts = D.series[k].map((p) => `${x(p[0])},${y(p[1])}`).join(" ");
+      svg.append(s("polyline", { points: pts, fill: "none", stroke: colors[i % 3], "stroke-width": 2, "stroke-linejoin": "round" }));
+      const last = D.series[k][D.series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[i % 3] })); });
+    [dates[0], dates[dates.length - 1]].forEach((d, i) => { const t = s("text", { x: i ? W - R : L, y: H - 6, "text-anchor": i ? "end" : "start" }); t.textContent = d; svg.append(t); });
+    return h("div", { class: "panel" }, h("h2", null, "累積損益率の推移"), svg,
+      h("div", { class: "legend" }, keys.map((k, i) => h("span", null, h("i", { style: `background:${colors[i % 3]}` }), D.labels[k]))));
+  },
+  accounts() {
+    const D = cache.D; if (!D) return null;
+    return h("div", { class: "panel" }, D.accounts.map((a) => h("div", { style: "margin-bottom:12px" },
+      h("h2", null, a.label),
+      a.holdings.length ? a.holdings.map((p) => h("div", { class: "row" }, h("span", null, `${p.name} ${p.shares}株`),
+        h("span", { class: `num ${signCls(p.pct)}` }, `${yen(p.price)} (${pct(p.pct)})`))) : h("div", { class: "mute" }, "保有なし"),
+      a.pending.map((o) => h("div", { class: "row" }, h("span", null, `注文: ${o.side === "buy" ? "買い" : "売り"} ${o.name} ${o.shares}株`), h("span", { class: "mute" }, o.reason))),
+      h("div", { class: "row" }, h("span", { class: "mute" }, "現金"), h("span", { class: "num" }, yen(a.cash))))));
+  },
+  fills() {
+    const D = cache.D; if (!D || !D.fills.length) return null;
+    return h("div", { class: "panel" }, h("h2", null, "最近の約定"), D.fills.map((f) => h("div", { class: "row" },
+      h("span", null, `${f.date.slice(5)} ${f.side === "buy" ? "買" : "売"} ${f.name} ${f.shares}株`), h("span", { class: "num" }, yen(f.price)))));
+  },
+  real() {
+    const s = cache.realState; if (!s) return h("div", { class: "panel" }, h("h2", null, "実際の保有(記録上)"), h("div", { class: "mute" }, "まだ記録がありません。記録タブから入金や約定を入れられます。"));
+    const names = {}; ((cache.D && cache.D.real) || []).forEach((r) => { names[r.ticker] = r.name; });
+    const hs = Object.entries(s.holdings || {});
+    return h("div", { class: "panel" }, h("h2", null, "実際の保有(記録上)"),
+      hs.length ? hs.map(([t, p]) => h("div", { class: "row" }, h("span", null, `${names[t] || t} ${p.shares}株`), h("span", { class: "num" }, `取得 ${yen(p.entry_price)}`))) : h("div", { class: "mute" }, "保有なし"),
+      h("div", { class: "row" }, h("span", { class: "mute" }, "現金(記録上)"), h("span", { class: "num" }, yen(s.cash))));
+  },
+  news() {
+    const D = cache.D; if (!D || !D.news) return null;
+    return h("div", { class: "note" }, D.news);
+  },
+};
+function renderLayoutEditor() {
+  const list = h("div", { class: "order" });
+  const draw = () => list.replaceChildren(...prefs.order.map((k, i) => h("div", { class: "row" },
+    h("span", { class: prefs.hidden.includes(k) ? "mute" : "" }, SECTIONS[k]),
+    h("span", null,
+      h("button", { "aria-label": "上へ", disabled: i === 0, onclick: () => { [prefs.order[i - 1], prefs.order[i]] = [prefs.order[i], prefs.order[i - 1]]; draw(); } }, "↑"),
+      h("button", { "aria-label": "下へ", disabled: i === prefs.order.length - 1, onclick: () => { [prefs.order[i + 1], prefs.order[i]] = [prefs.order[i], prefs.order[i + 1]]; draw(); } }, "↓"),
+      h("button", { onclick: () => { prefs.hidden = prefs.hidden.includes(k) ? prefs.hidden.filter((x) => x !== k) : [...prefs.hidden, k]; draw(); } }, prefs.hidden.includes(k) ? "出す" : "隠す")))));
+  draw();
+  const msg = h("div");
+  app.replaceChildren(head("表示をカスタマイズ"), h("div", { class: "panel" }, h("p", { class: "mute", style: "margin-top:0" }, "ホームに出す項目の順番と表示・非表示を決めます。保存すると、スマホでもパソコンでも同じ並びになります。"), list), msg,
+    h("div", { class: "actions" },
+      h("button", { class: "primary", onclick: async () => {
+        LS.set("kb.prefs", JSON.stringify(prefs)); msg.replaceChildren();
+        try { const r = await putFile("data/app_prefs.json", JSON.stringify(prefs, null, 2) + "\n", cache.prefSha, "アプリ: 表示の設定を更新"); cache.prefSha = r.content.sha; tab = "home"; render(); }
+        catch (e) { msg.replaceChildren(h("div", { class: "err" }, "この端末には保存しましたが、共有はできませんでした。" + explain(e))); }
+      } }, "保存"),
+      h("button", { onclick: render }, "やめる")));
+}
+
+// ===== 記録 =====
+function renderRecord() {
+  let kind = "buy"; let step = "edit";
+  const f = { date: h("input", { id: "date", type: "date", value: todayJst() }), ticker: h("input", { id: "ticker", inputmode: "numeric", placeholder: "例 5801", autocomplete: "off" }),
+    shares: h("input", { id: "shares", type: "number", inputmode: "numeric", min: "1", step: "1", placeholder: "100" }), price: h("input", { id: "price", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "約定単価" }),
+    amount: h("input", { id: "amount", type: "number", inputmode: "numeric", min: "1", step: "1", placeholder: "金額(円)" }),
+    fee: h("input", { id: "fee", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "0" }), tax: h("input", { id: "tax", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "0" }) };
+  const box = h("div", { class: "form" }); const status = h("div"); const history = h("div", { class: "panel" }, h("h2", null, "最近の記録"), h("div", { class: "mute" }, "読み込み中..."));
+  const KINDS = [["buy", "買い"], ["sell", "売り"], ["deposit", "入金"], ["withdraw", "出金"]];
+  const isTrade = () => kind === "buy" || kind === "sell";
+  function build() {
+    const req = { kind, date: f.date.value || todayJst() };
+    if (isTrade()) { Object.assign(req, { ticker: f.ticker.value.trim(), shares: Number(f.shares.value), price: Number(f.price.value), fee: Number(f.fee.value || 0) }); if (kind === "sell") req.tax = Number(f.tax.value || 0); }
+    else req.amount = Number(f.amount.value);
+    return req;
+  }
+  function problem(r) {
+    if (isTrade()) { if (!/^\d{4}[A-Z]?(\.T)?$/i.test(r.ticker)) return "銘柄コードは4桁の数字で入れてください(例 5801)。"; if (!Number.isInteger(r.shares) || r.shares <= 0) return "株数は1以上の整数で入れてください。"; if (!(r.price > 0)) return "約定単価を入れてください。"; }
+    else if (!(r.amount > 0)) return "金額を入れてください。";
+    return null;
+  }
+  function summary(r) { return isTrade() ? `${r.kind === "buy" ? "買い" : "売り"} ${r.ticker.replace(/\.T$/i, "")} ${r.shares}株 @ ${yen(r.price)}(${r.date})` : `${r.kind === "deposit" ? "入金" : "出金"} ${yen(r.amount)}(${r.date})`; }
+  function draw() {
+    box.replaceChildren(
+      h("div", { class: "seg", role: "group", "aria-label": "種類" }, KINDS.map(([k, label]) => h("button", { "aria-pressed": String(kind === k), onclick: () => { kind = k; step = "edit"; status.replaceChildren(); draw(); } }, label))),
+      h("label", null, "約定日・入出金日", f.date),
+      isTrade() ? [h("label", null, "銘柄コード", f.ticker), h("div", { class: "grid2" }, h("label", null, "株数", f.shares), h("label", null, "約定単価(円)", f.price)),
+        h("div", { class: "grid2" }, h("label", null, "手数料(円・任意)", f.fee), kind === "sell" ? h("label", null, "源泉徴収税(円・任意)", f.tax) : null)] : h("label", null, "金額(円)", f.amount),
+      step === "confirm" ? h("div", { class: "note" }, "この内容で記録します。SBI証券の約定履歴と合っているか確認してください。\n" + summary(build())) : null,
+      h("div", { class: "actions" }, step === "confirm" ? [h("button", { class: "primary", id: "send", onclick: send }, "記録する"), h("button", { onclick: () => { step = "edit"; draw(); } }, "直す")]
+        : h("button", { class: "primary", onclick: () => { const p = problem(build()); status.replaceChildren(); if (p) { status.append(h("div", { class: "err" }, p)); return; } step = "confirm"; draw(); } }, "内容を確認")));
+  }
+  async function send() {
+    const r = build(); const btn = document.getElementById("send"); btn.disabled = true; status.replaceChildren();
+    const stamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15); const name = `data/inbox/${stamp}-${Math.random().toString(36).slice(2, 6)}.json`;
+    try { await putFile(name, JSON.stringify(r, null, 2) + "\n", null, `アプリ: 記録の依頼(${summary(r)})`);
+      status.replaceChildren(h("div", { class: "okmsg" }, "送信しました。1〜2分で台帳に反映され、Discordにも通知が届きます。反映の結果は、下の「最近の記録」を読み込み直すと見られます。")); step = "edit"; draw(); loadHistory(); }
+    catch (e) { status.replaceChildren(h("div", { class: "err" }, explain(e))); btn.disabled = false; }
+  }
+  async function loadHistory() {
+    try {
+      const [log, flow, inbox, failed] = await Promise.all([getFile("data/trade_log.csv"), getFile("data/cash_flows.csv"), gh("contents/data/inbox?ref=main").catch(() => []), gh("contents/data/inbox/failed?ref=main").catch(() => [])]);
+      const waiting = (Array.isArray(inbox) ? inbox : []).filter((x) => x.name.endsWith(".json")).length;
+      const rows = [];
+      if (log) log.text.trim().split("\n").slice(1).forEach((l) => { const c = l.split(","); rows.push({ d: c[0], t: `${c[1] === "buy" ? "買" : "売"} ${c[2].replace(".T", "")} ${c[3]}株 @${Number(c[4]).toLocaleString("ja-JP")}円` }); });
+      if (flow) flow.text.trim().split("\n").slice(1).forEach((l) => { const c = l.split(","); rows.push({ d: c[0], t: `${Number(c[1]) > 0 ? "入金" : "出金"} ${Math.abs(Number(c[1])).toLocaleString("ja-JP")}円` }); });
+      rows.sort((a, b) => (a.d < b.d ? 1 : -1));
+      history.replaceChildren(h("h2", null, "最近の記録"),
+        waiting ? h("div", { class: "note", style: "margin-bottom:8px" }, `反映待ちが${waiting}件あります。少し待ってから読み込み直してください。`) : null,
+        Array.isArray(failed) && failed.length ? h("div", { class: "err", style: "margin-bottom:8px" }, `記録できなかった依頼が${failed.length}件あります(data/inbox/failed に理由つきで残っています)。`) : null,
+        rows.length ? rows.slice(0, 10).map((r) => h("div", { class: "row" }, h("span", null, r.t), h("span", { class: "mute num" }, r.d.slice(5)))) : h("div", { class: "mute" }, "まだ記録がありません。"),
+        h("button", { style: "margin-top:8px", onclick: loadHistory }, "読み込み直す"));
+    } catch (e) { history.replaceChildren(h("h2", null, "最近の記録"), h("div", { class: "err" }, explain(e))); }
+  }
+  app.replaceChildren(head("記録", "約定した内容を残します(発注はしません)"), h("div", { class: "panel" }, box), status, history);
+  draw(); loadHistory();
+}
+
+// ===== 設定(設定ファイルの編集) =====
+function renderConfig() {
+  let current = CONFIG_FILES[0]; let sha = null;
+  const sel = h("select", { id: "file", onchange: () => { current = sel.value; load(); } }, CONFIG_FILES.map((p) => h("option", { value: p }, p.replace("config/", ""))));
+  const ta = h("textarea", { id: "editor", spellcheck: "false", autocapitalize: "off" }); const msg = h("div");
+  async function load() {
+    msg.replaceChildren(); ta.value = "読み込み中..."; ta.disabled = true;
+    try { const f = await getFile(current); sha = f ? f.sha : null; ta.value = f ? f.text : ""; } catch (e) { ta.value = ""; msg.replaceChildren(h("div", { class: "err" }, explain(e))); }
+    ta.disabled = false;
+  }
+  async function save() {
+    msg.replaceChildren();
+    try { JSON.parse(ta.value); } catch (e) { msg.replaceChildren(h("div", { class: "err" }, "JSONの形が正しくありません: " + e.message)); return; }
+    try { const r = await putFile(current, ta.value.endsWith("\n") ? ta.value : ta.value + "\n", sha, `アプリ: ${current} を更新`); sha = r.content.sha;
+      msg.replaceChildren(h("div", { class: "okmsg" }, "保存しました。次の日次処理から反映されます。")); }
+    catch (e) { msg.replaceChildren(h("div", { class: "err" }, explain(e))); }
+  }
+  app.replaceChildren(head("設定", "戦略・資金・コストの設定ファイル"),
+    h("div", { class: "panel form" }, h("label", null, "ファイル", sel), ta,
+      h("p", { class: "mute", style: "margin:0;font-size:13px" }, "資金や銘柄の変更は、次の日次処理(平日18:30)から効きます。ペーパートレードの開始日を過ぎたあとに口座の設定を変えるときは、先に相談してください。"),
+      msg, h("div", { class: "actions" }, h("button", { class: "primary", onclick: save }, "保存"), h("button", { onclick: load }, "読み込み直す"))),
+    h("div", { class: "panel form" }, h("h2", null, "この端末の接続"),
+      h("div", { class: "mute", style: "overflow-wrap:anywhere" }, `リポジトリ: ${conn.repo}`),
+      h("div", { class: "actions" }, h("button", { onclick: () => { LS.del("kb.token"); conn.token = ""; render(); } }, "トークンを消す(つなぎ直す)"))));
+  load();
+}
+
+// ===== 実行 =====
+function renderRun() {
+  const msg = h("div"); const runs = h("div", { class: "panel" }, h("h2", null, "最近の実行"), h("div", { class: "mute" }, "読み込み中..."));
+  async function dispatch(file, inputs, label) {
+    msg.replaceChildren();
+    try { await gh(`actions/workflows/${file}/dispatches`, { method: "POST", body: JSON.stringify({ ref: "main", inputs }) });
+      msg.replaceChildren(h("div", { class: "okmsg" }, `${label}を開始しました。数分かかります。下の一覧を読み込み直すと進み具合が分かります。`)); setTimeout(loadRuns, 4000); }
+    catch (e) { msg.replaceChildren(h("div", { class: "err" }, explain(e))); }
+  }
+  async function loadRuns() {
+    try { const r = await gh("actions/runs?per_page=8");
+      const label = (x) => (x.status !== "completed" ? ["実行中", "run"] : x.conclusion === "success" ? ["成功", "success"] : x.conclusion === "failure" ? ["失敗", "failure"] : [x.conclusion || "-", ""]);
+      runs.replaceChildren(h("h2", null, "最近の実行"), r.workflow_runs.length ? r.workflow_runs.map((x) => { const [t, c] = label(x);
+        return h("div", { class: "row" }, h("span", null, `${x.name}(${x.event === "schedule" ? "定時" : x.event === "push" ? "記録" : "手動"})`),
+          h("span", null, h("span", { class: `chip ${c}` }, t), " ", h("span", { class: "mute num" }, new Date(x.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })))); }) : h("div", { class: "mute" }, "まだ実行がありません。"),
+        h("button", { style: "margin-top:8px", onclick: loadRuns }, "読み込み直す"));
+    } catch (e) { runs.replaceChildren(h("h2", null, "最近の実行"), h("div", { class: "err" }, explain(e))); }
+  }
+  app.replaceChildren(head("実行", "クラウドで動かす(PCは不要)"),
+    h("div", { class: "panel form" },
+      h("p", { class: "mute", style: "margin:0" }, "毎営業日の18:30には自動で動きます。ここからは今すぐ動かせます。結果はDiscordに届き、ホームにも反映されます。"),
+      h("button", { class: "primary", onclick: () => dispatch("daily.yml", { init: "false", month_end_force: "false" }, "日次処理") }, "日次処理を今すぐ実行"),
+      h("button", { onclick: () => dispatch("daily.yml", { init: "false", month_end_force: "true" }, "月次の入れ替え提案") }, "月次の入れ替え提案も実行")),
+    msg, runs);
+  loadRuns();
+}
+
+render();
+</script>
+</body>
+</html>
