@@ -66,6 +66,8 @@ button:disabled { opacity: .5; cursor: default; }
 .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .seg button { padding: 10px 4px; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+.seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.seg2 button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); }
 .chip.success { color: var(--ok); border-color: var(--ok); } .chip.failure { color: var(--err-ink); border-color: var(--err-ink); }
@@ -267,10 +269,13 @@ const SECTION_RENDER = {
   },
   real() {
     const s = cache.realState; if (!s) return h("div", { class: "panel" }, h("h2", null, "実際の保有(記録上)"), h("div", { class: "mute" }, "まだ記録がありません。記録タブから入金や約定を入れられます。"));
-    const names = {}; ((cache.D && cache.D.real) || []).forEach((r) => { names[r.ticker] = r.name; });
+    const info = {}; ((cache.D && cache.D.real) || []).forEach((r) => { info[r.ticker] = r; });
     const hs = Object.entries(s.holdings || {});
+    const one = (n) => (Math.round(n * 10) / 10).toLocaleString("ja-JP") + "円";
     return h("div", { class: "panel" }, h("h2", null, "実際の保有(記録上)"),
-      hs.length ? hs.map(([t, p]) => h("div", { class: "row" }, h("span", null, `${names[t] || t} ${p.shares}株`), h("span", { class: "num" }, `取得 ${yen(p.entry_price)}`))) : h("div", { class: "mute" }, "保有なし"),
+      hs.length ? hs.map(([t, p]) => { const r = info[t] || {};
+        return h("div", { class: "row" }, h("span", null, `${r.name || t}${p.margin ? "(信用買建)" : ""} ${p.shares}株`, h("br"), h("small", { class: "mute num" }, `取得 ${one(p.entry_price)}` + (r.price ? ` → 現在 ${one(r.price)}` : " → 現在値は次の更新で表示"))),
+          r.pnl != null ? h("span", { class: `num ${signCls(r.pnl)}` }, `${r.pnl >= 0 ? "+" : "−"}${Math.abs(Math.round(r.pnl)).toLocaleString("ja-JP")}円`, h("br"), h("small", null, pct(r.pct))) : h("span", { class: "mute" }, "-")); }) : h("div", { class: "mute" }, "保有なし"),
       h("div", { class: "row" }, h("span", { class: "mute" }, "現金(記録上)"), h("span", { class: "num" }, yen(s.cash))));
   },
   news() {
@@ -300,7 +305,7 @@ function renderLayoutEditor() {
 
 // ===== 記録 =====
 function renderRecord() {
-  let kind = "buy"; let step = "edit";
+  let kind = "buy"; let step = "edit"; let margin = false;
   const f = { date: h("input", { id: "date", type: "date", value: todayJst() }), ticker: h("input", { id: "ticker", inputmode: "numeric", placeholder: "例 5801", autocomplete: "off" }),
     shares: h("input", { id: "shares", type: "number", inputmode: "numeric", min: "1", step: "1", placeholder: "100" }), price: h("input", { id: "price", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "約定単価" }),
     amount: h("input", { id: "amount", type: "number", inputmode: "numeric", min: "1", step: "1", placeholder: "金額(円)" }),
@@ -310,6 +315,7 @@ function renderRecord() {
   const isTrade = () => kind === "buy" || kind === "sell";
   function build() {
     const req = { kind, date: f.date.value || todayJst() };
+    if (kind === "buy" && margin) req.margin = true;
     if (isTrade()) { Object.assign(req, { ticker: f.ticker.value.trim(), shares: Number(f.shares.value), price: Number(f.price.value), fee: Number(f.fee.value || 0) }); if (kind === "sell") req.tax = Number(f.tax.value || 0); }
     else req.amount = Number(f.amount.value);
     return req;
@@ -319,12 +325,12 @@ function renderRecord() {
     else if (!(r.amount > 0)) return "金額を入れてください。";
     return null;
   }
-  function summary(r) { return isTrade() ? `${r.kind === "buy" ? "買い" : "売り"} ${r.ticker.replace(/\.T$/i, "")} ${r.shares}株 @ ${yen(r.price)}(${r.date})` : `${r.kind === "deposit" ? "入金" : "出金"} ${yen(r.amount)}(${r.date})`; }
+  function summary(r) { return isTrade() ? `${r.kind === "buy" ? (r.margin ? "信用買建" : "買い") : "売り"} ${r.ticker.replace(/\.T$/i, "")} ${r.shares}株 @ ${(Math.round(r.price * 10) / 10).toLocaleString("ja-JP")}円(${r.date})` : `${r.kind === "deposit" ? "入金" : "出金"} ${yen(r.amount)}(${r.date})`; }
   function draw() {
     box.replaceChildren(
       h("div", { class: "seg", role: "group", "aria-label": "種類" }, KINDS.map(([k, label]) => h("button", { "aria-pressed": String(kind === k), onclick: () => { kind = k; step = "edit"; status.replaceChildren(); draw(); } }, label))),
       h("label", null, "約定日・入出金日", f.date),
-      isTrade() ? [h("label", null, "銘柄コード", f.ticker), h("div", { class: "grid2" }, h("label", null, "株数", f.shares), h("label", null, "約定単価(円)", f.price)),
+      isTrade() ? [kind === "buy" ? h("div", { class: "seg2", role: "group", "aria-label": "取引の種類" }, [[false, "現物"], [true, "信用買建(制度)"]].map(([m, label]) => h("button", { "aria-pressed": String(margin === m), onclick: () => { margin = m; draw(); } }, label))) : h("p", { class: "mute", style: "margin:0;font-size:13px" }, "信用で買った銘柄の売りは、自動で信用の返済売りとして記録されます。"), h("label", null, "銘柄コード", f.ticker), h("div", { class: "grid2" }, h("label", null, "株数", f.shares), h("label", null, "約定単価(円)", f.price)),
         h("div", { class: "grid2" }, h("label", null, "手数料(円・任意)", f.fee), kind === "sell" ? h("label", null, "源泉徴収税(円・任意)", f.tax) : null)] : h("label", null, "金額(円)", f.amount),
       step === "confirm" ? h("div", { class: "note" }, "この内容で記録します。SBI証券の約定履歴と合っているか確認してください。\n" + summary(build())) : null,
       h("div", { class: "actions" }, step === "confirm" ? [h("button", { class: "primary", id: "send", onclick: send }, "記録する"), h("button", { onclick: () => { step = "edit"; draw(); } }, "直す")]
