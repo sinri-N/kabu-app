@@ -14,7 +14,7 @@
   --bg: #f3f2ee; --panel: #fbfaf7; --ink: #1d2433; --mute: #667085; --line: #dedbd2;
   --accent: #2b4a7a; --on-accent: #ffffff; --gain: #b3382c; --loss: #2563a8;
   --ok: #2f7a4d; --warn-bg: #fbeeda; --warn-ink: #7a4a05; --err-bg: #f8dcd8; --err-ink: #8a2a20;
-  --c1: #2b4a7a; --c2: #c27a1a; --c3: #8a8f99;
+  --c1: #2b4a7a; --c2: #c27a1a; --c3: #8a8f99; --c4: #3a8a6a;
   --sans: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   --mono: "DM Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
@@ -22,12 +22,12 @@
   --bg: #151922; --panel: #1c212c; --ink: #e6e8ee; --mute: #98a1b2; --line: #2d3443;
   --accent: #8fb0e6; --on-accent: #101626; --gain: #ef7d70; --loss: #7fb2ee;
   --ok: #7ccb98; --warn-bg: #3a2c12; --warn-ink: #f0c987; --err-bg: #3f1f1b; --err-ink: #f2a79e;
-  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; color-scheme: dark; } }
+  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; --c4: #6fcf9f; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #151922; --panel: #1c212c; --ink: #e6e8ee; --mute: #98a1b2; --line: #2d3443;
   --accent: #8fb0e6; --on-accent: #101626; --gain: #ef7d70; --loss: #7fb2ee;
   --ok: #7ccb98; --warn-bg: #3a2c12; --warn-ink: #f0c987; --err-bg: #3f1f1b; --err-ink: #f2a79e;
-  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; color-scheme: dark; }
+  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; --c4: #6fcf9f; color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6;
@@ -245,13 +245,13 @@ const SECTION_RENDER = {
       svg.append(s("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)", "stroke-width": 1 }));
       const t = s("text", { x: L - 4, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v.toFixed(1) + "%"; svg.append(t); }
     const zero = s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "3 3" }); svg.append(zero);
-    const colors = ["var(--c1)", "var(--c2)", "var(--c3)"];
+    const colors = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
     keys.forEach((k, i) => { const pts = D.series[k].map((p) => `${x(p[0])},${y(p[1])}`).join(" ");
-      svg.append(s("polyline", { points: pts, fill: "none", stroke: colors[i % 3], "stroke-width": 2, "stroke-linejoin": "round" }));
-      const last = D.series[k][D.series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[i % 3] })); });
+      svg.append(s("polyline", { points: pts, fill: "none", stroke: colors[i % 4], "stroke-width": 2, "stroke-linejoin": "round" }));
+      const last = D.series[k][D.series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[i % 4] })); });
     [dates[0], dates[dates.length - 1]].forEach((d, i) => { const t = s("text", { x: i ? W - R : L, y: H - 6, "text-anchor": i ? "end" : "start" }); t.textContent = d; svg.append(t); });
     return h("div", { class: "panel" }, h("h2", null, "累積損益率の推移"), svg,
-      h("div", { class: "legend" }, keys.map((k, i) => h("span", null, h("i", { style: `background:${colors[i % 3]}` }), D.labels[k]))));
+      h("div", { class: "legend" }, keys.map((k, i) => h("span", null, h("i", { style: `background:${colors[i % 4]}` }), D.labels[k]))));
   },
   accounts() {
     const D = cache.D; if (!D) return null;
