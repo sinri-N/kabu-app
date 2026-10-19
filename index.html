@@ -134,8 +134,10 @@ const todayJst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 
 
 // ===== GitHub とのやりとり =====
 async function gh(path, opts = {}) {
-  const res = await fetch(`https://api.github.com/repos/${conn.repo}/${path}`, {
-    ...opts, cache: "no-store",
+  // 古い内容が返らないよう、読み取りには毎回違う値を付ける(cache指定はGitHubのCORSで拒否されるので使わない)
+  const bust = (opts.method || "GET") === "GET" ? (path.includes("?") ? "&" : "?") + "_=" + Date.now() : "";
+  const res = await fetch(`https://api.github.com/repos/${conn.repo}/${path}${bust}`, {
+    ...opts,
     headers: { Authorization: `Bearer ${conn.token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", ...(opts.headers || {}) },
   });
   if (res.status === 204) return null;
