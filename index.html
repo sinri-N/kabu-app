@@ -138,6 +138,35 @@ svg text { fill: var(--mute); font-family: var(--mono); font-size: 10px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; margin-top: 6px; }
 .legend i { display: inline-block; width: 12px; height: 3px; margin-right: 5px; vertical-align: middle; }
 @media (prefers-reduced-motion: no-preference) { .panel, .card { transition: border-color .15s; } }
+.panel.hero { display: flex; flex-direction: column; gap: 4px; padding: 14px 0 0; overflow: hidden; }
+.hero > small, .hero > .big, .hero > .delta { padding-inline: 14px; }
+.hero > small { color: var(--mute); }
+.hero .big { font-size: 30px; line-height: 1.25; letter-spacing: -.01em; }
+.delta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 13px; }
+.cb { padding: 6px 6px 0; }
+.legend { padding: 0 8px 4px; } .legend b { font-weight: 500; }
+.strip { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); margin-top: 6px; }
+.strip > div { padding: 10px 14px; border-right: 1px solid var(--line); min-width: 0; } .strip > div:last-child { border-right: 0; }
+.strip small { display: block; color: var(--mute); font-size: 12px; }
+.strip .v { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.empty { margin: 8px 14px; height: 96px; border: 1px dashed var(--line); border-radius: 12px; display: grid; place-items: center; text-align: center; padding: 0 16px; font-size: 13px; color: var(--mute); }
+.panel.flush { padding: 0; overflow: hidden; }
+.htabs { display: flex; border-bottom: 1px solid var(--line); }
+.htabs button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 10px 2px; min-height: 46px; color: var(--mute); font-size: 14px; white-space: nowrap; }
+.htabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+.cnt { margin-left: 4px; font-size: 11px; font-weight: 400; color: var(--mute); }
+.hd, .tr { display: grid; grid-template-columns: 1.2fr 74px 1fr; gap: 10px; align-items: center; padding: 8px 14px; }
+.hd { font-size: 11px; color: var(--mute); background: var(--bg); }
+.tr { border-bottom: 1px solid var(--line); font-size: 13px; }
+.tr .nm b { font-weight: 500; display: block; font-size: 14px; }
+.tr small { color: var(--mute); font-size: 12px; }
+.tr .r { text-align: right; line-height: 1.4; } .tr .r .pnl { font-size: 14px; } .tr .r small { color: inherit; }
+.share { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-bottom: 3px; } .share i { display: block; height: 100%; background: var(--accent); }
+.sec { padding: 10px 14px 4px; font-size: 12px; color: var(--mute); background: var(--bg); }
+.none { padding: 20px 14px; text-align: center; color: var(--mute); font-size: 14px; }
+.foot { display: flex; justify-content: space-between; padding: 10px 14px; font-size: 13px; background: var(--bg); }
+.pad { padding: 4px 14px 10px; }
+.pad > small { display: block; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -278,7 +307,7 @@ function hitRow(c, after) {
 }
 (function initSearch() {
   const q = document.getElementById("q"), res = document.getElementById("res");
-  const refreshHome = () => { if (tab === "home" && onRefresh) renderHome(true); };
+  const refreshHome = () => { if (tab === "home" && cache.D) drawHome(); };
   function draw() {
     const raw = q.value.trim(); if (!raw) { res.hidden = true; return; }
     const codes = matchStocks(raw, 8);
@@ -337,150 +366,184 @@ function renderConnect() {
 }
 
 // ===== ホーム =====
+// 上のスイッチで「Claude(仮想)」と「自分(実際・記録上)」を切り替える。切り替えると、評価額・チャート・要約・表がすべて入れ替わる。
+let scope = LS.get("kb.scope") === "me" ? "me" : "claude";
+let htab = "hold"; // 保有 / 約定 / ニュース / 登録
+const signYen = (n) => `${n >= 0 ? "+" : "−"}${Math.abs(Math.round(n)).toLocaleString("ja-JP")}円`;
+const one1 = (n) => (Math.round(n * 10) / 10).toLocaleString("ja-JP") + "円";
+const shortCode = (t) => t.replace(/\.T$/i, "");
+const nameOfTicker = (t) => (nameMap && nameMap[shortCode(t)]) || shortCode(t);
+
 async function loadHome() {
-  const [dash, real, prefFile] = await Promise.all([getFile("data/dashboard.html"), getFile("data/portfolio_state.json"), getFile("data/app_prefs.json"), loadNames().catch(() => null)]);
+  const [dash, real, prefFile, log] = await Promise.all([getFile("data/dashboard.html"), getFile("data/portfolio_state.json"), getFile("data/app_prefs.json"), getFile("data/trade_log.csv"), loadNames().catch(() => null)]);
   let D = null;
   if (dash) { const m = dash.text.match(/const D = (\{.*\});/); if (m) { try { D = JSON.parse(m[1]); } catch (e) { D = null; } } }
   let realState = null;
   if (real) { try { realState = JSON.parse(real.text); } catch (e) { realState = null; } }
   if (prefFile) { try { prefs = normalizePrefs(JSON.parse(prefFile.text)); LS.set("kb.prefs", JSON.stringify(prefs)); } catch (e) { /* 壊れていたら今の設定のまま */ } }
-  cache = { D, realState, prefSha: prefFile ? prefFile.sha : null };
+  const trades = log ? log.text.trim().split("\n").slice(1).map((l) => { const c = l.split(","); return { date: c[0], side: c[1], ticker: c[2], shares: Number(c[3]), price: Number(c[4]), fee: Number(c[5]), pnl: Number(c[7]), margin: c[8] || "" }; }).reverse() : [];
+  cache = { D, realState, trades, prefSha: prefFile ? prefFile.sha : null };
 }
 async function renderHome(quiet) {
   onRefresh = () => renderHome(true);
-  if (!quiet) app.replaceChildren(head("ホーム"), h("div", { class: "sk", style: "height:92px" }), h("div", { class: "sk", style: "height:200px" }), h("div", { class: "sk", style: "height:140px" }));
+  if (!quiet) app.replaceChildren(head("ホーム"), h("div", { class: "sk", style: "height:48px" }), h("div", { class: "sk", style: "height:300px" }), h("div", { class: "sk", style: "height:200px" }));
   try { await loadHome(); } catch (e) { app.replaceChildren(head("ホーム"), h("div", { class: "err" }, explain(e))); return; }
   if (tab !== "home" || !onRefresh) return; // 読み込み中に別の画面へ移っていたら描き直さない
+  drawHome();
+}
+function drawHome() {
   const { D } = cache;
   const nodes = [head("ホーム", D ? `更新 ${D.updated.slice(5).replace("-", "/")}` : "まだデータがありません")];
-  prefs.order.filter((k) => !prefs.hidden.includes(k)).forEach((k) => { const n = SECTION_RENDER[k](); if (n) nodes.push(n); });
-  nodes.push(h("div", { class: "actions" }, h("button", { onclick: renderLayoutEditor }, "表示をカスタマイズ")));
+  nodes.push(h("div", { class: "seg2", role: "group", "aria-label": "表示する口座" },
+    [["claude", "Claude(仮想)"], ["me", "自分(実際)"]].map(([k, label]) => h("button", { "aria-pressed": String(scope === k), onclick: () => { scope = k; htab = "hold"; LS.set("kb.scope", k); drawHome(); } }, label))));
+  if (!D) nodes.push(h("div", { class: "note" }, "まとめのデータがまだありません。実行タブから日次処理を動かすと表示されます。"));
+  else nodes.push(scope === "claude" ? claudeTop(D) : meTop(D));
+  const tabs = [["hold", "保有"], ["fills", "約定"], ["news", "ニュース"], ["watch", "登録"]];
+  nodes.push(h("div", { class: "panel flush" },
+    h("div", { class: "htabs", role: "tablist" }, tabs.map(([k, label]) => h("button", { role: "tab", "aria-selected": String(htab === k), onclick: () => { htab = k; drawHome(); } }, label, tabCount(k)))),
+    homeBody()));
   app.replaceChildren(...nodes);
 }
-const signYen = (n) => `${n >= 0 ? "+" : "−"}${Math.abs(Math.round(n)).toLocaleString("ja-JP")}円`;
-const one1 = (n) => (Math.round(n * 10) / 10).toLocaleString("ja-JP") + "円";
-// 保有1行: 銘柄名と「株数・取得単価」/ 右に損益と現在値
-function holdRow(name, shares, entry, price, pctVal) {
-  const pnl = price != null ? (price - entry) * shares : null;
-  return h("div", { class: "row hold" }, h("div", null, h("div", { class: "nm" }, name), h("small", { class: "num" }, `${shares}株 · 取得 ${one1(entry)}`)),
-    pnl != null ? h("div", null, h("div", { class: `num strong ${signCls(pnl)}` }, signYen(pnl), " ", h("span", { class: "pill num" }, pct(pctVal))), h("small", { class: "num" }, `現在 ${one1(price)}`))
-      : h("div", { class: "mute" }, "現在値は次の更新で"));
+function tabCount(k) {
+  const n = k === "hold" ? heldList().length : k === "news" ? newsGroups().length : k === "watch" ? prefs.watch.length : 0;
+  return n ? h("span", { class: "cnt num" }, n) : null;
 }
-const SECTION_RENDER = {
-  summary() {
-    const D = cache.D; if (!D) return h("div", { class: "note" }, "まとめのデータがまだありません。実行タブから日次処理を動かすと表示されます。");
-    const gap = (a) => a.cumulative - D.benchmark.cumulative;
-    const cards = D.accounts.map((a) => h("div", { class: "card" }, h("small", null, a.label),
-      h("div", { class: "big num" }, yen(a.value)),
-      h("div", { class: "meta" }, h("span", { class: `pill num ${signCls(a.cumulative)}` }, pct(a.cumulative)), h("span", { class: `num ${signCls(a.day_pnl)}` }, `前日比 ${signYen(a.day_pnl)}`)),
-      h("small", { class: "num" }, "ETF比 ", h("span", { class: signCls(gap(a)) }, `${gap(a) >= 0 ? "+" : "−"}${Math.abs(gap(a)).toFixed(2)}pt`))));
-    cards.push(h("div", { class: "card" }, h("small", null, D.benchmark.label), h("div", { class: "big num" }, yen(D.benchmark.value)),
-      h("div", { class: "meta" }, h("span", { class: `pill num ${signCls(D.benchmark.cumulative)}` }, pct(D.benchmark.cumulative)))));
-    return h("div", { class: "cards" }, cards);
-  },
-  chart() {
-    const D = cache.D; if (!D) return null;
-    const keys = Object.keys(D.series).filter((k) => D.series[k].length); if (!keys.length) return null;
-    const W = 640, H = 220, L = 40, R = 10, T = 10, B = 24;
-    const dates = [...new Set(keys.flatMap((k) => D.series[k].map((p) => p[0])))].sort();
-    const vals = keys.flatMap((k) => D.series[k].map((p) => p[1]));
-    let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals); if (hi - lo < 1) { hi += 0.5; lo -= 0.5; }
-    const x = (d) => L + (dates.length < 2 ? 0 : (dates.indexOf(d) / (dates.length - 1)) * (W - L - R));
-    const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
-    const NS = "http://www.w3.org/2000/svg", s = (t, a) => { const e = document.createElementNS(NS, t); Object.entries(a).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
-    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": "累積損益率の推移", class: "chart" });
-    for (let i = 0; i <= 4; i++) { const v = lo + ((hi - lo) * i) / 4;
-      svg.append(s("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)", "stroke-width": 1 }));
-      const t = s("text", { x: L - 4, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v.toFixed(1) + "%"; svg.append(t); }
-    const zero = s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "3 3" }); svg.append(zero);
-    const colors = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
-    keys.forEach((k, i) => { const pts = D.series[k].map((p) => `${x(p[0])},${y(p[1])}`).join(" ");
-      svg.append(s("polyline", { points: pts, fill: "none", stroke: colors[i % 4], "stroke-width": 2, "stroke-linejoin": "round" }));
-      const last = D.series[k][D.series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[i % 4] })); });
-    [dates[0], dates[dates.length - 1]].forEach((d, i) => { const t = s("text", { x: i ? W - R : L, y: H - 6, "text-anchor": i ? "end" : "start" }); t.textContent = d; svg.append(t); });
-    // タップ・なぞると、その日の値を上に出す
-    const readout = h("div", { class: "readout num mute" }, "タップで日ごとの値");
-    const guide = s("line", { y1: T, y2: H - B, stroke: "var(--mute)", "stroke-width": 1, opacity: 0 }); svg.append(guide);
-    const show = (ev) => {
-      const r = svg.getBoundingClientRect(); const px = ((ev.clientX - r.left) / r.width) * W;
-      const i = Math.max(0, Math.min(dates.length - 1, dates.length < 2 ? 0 : Math.round(((px - L) / (W - L - R)) * (dates.length - 1)))); const d = dates[i];
-      guide.setAttribute("x1", x(d)); guide.setAttribute("x2", x(d)); guide.setAttribute("opacity", 1);
-      readout.replaceChildren(h("b", null, d.slice(5).replace("-", "/")), ...keys.map((k, j) => { const p = D.series[k].find((q) => q[0] === d);
-        return p ? h("span", null, h("i", { style: `background:${colors[j % 4]}` }), pct(p[1])) : ""; }));
-    };
-    svg.addEventListener("pointerdown", show); svg.addEventListener("pointermove", show);
-    return h("div", { class: "panel" }, h("h2", null, "累積損益率の推移"), readout, svg,
-      h("div", { class: "legend" }, keys.map((k, i) => h("span", null, h("i", { style: `background:${colors[i % 4]}` }), D.labels[k]))));
-  },
-  accounts() {
-    const D = cache.D; if (!D) return null;
-    return h("div", { class: "panel" }, D.accounts.map((a) => [
-      h("h2", { class: "sec" }, a.label),
-      a.holdings.length ? a.holdings.map((p) => holdRow(p.name, p.shares, p.entry, p.price, p.pct)) : h("div", { class: "mute" }, "保有なし"),
-      a.pending.map((o) => h("div", { class: "row" }, h("span", null, h("span", { class: `tag ${o.side}` }, o.side === "buy" ? "買" : "売"), `${o.name} ${o.shares}株`), h("span", { class: "mute" }, o.reason))),
-      h("div", { class: "row" }, h("span", { class: "mute" }, "現金"), h("span", { class: "num" }, yen(a.cash)))]));
-  },
-  fills() {
-    const D = cache.D; if (!D || !D.fills.length) return null;
-    return h("div", { class: "panel" }, h("h2", null, "最近の約定"), D.fills.map((f) => h("div", { class: "row" },
-      h("span", null, h("span", { class: `tag ${f.side}` }, f.side === "buy" ? "買" : "売"), `${f.name} ${f.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, f.date.slice(5).replace("-", "/"))), h("span", { class: "num" }, one1(f.price)))));
-  },
-  real() {
-    const s = cache.realState; if (!s) return h("div", { class: "panel" }, h("h2", null, "実際の保有(記録上)"), h("div", { class: "mute" }, "まだ記録がありません。記録タブから入金や約定を入れられます。"));
-    const info = {}; ((cache.D && cache.D.real) || []).forEach((r) => { info[r.ticker] = r; });
-    const hs = Object.entries(s.holdings || {});
-    return h("div", { class: "panel" }, h("h2", null, "実際の保有(記録上)"),
-      hs.length ? hs.map(([t, p]) => { const r = info[t] || {};
-        return holdRow(`${r.name || t}${p.margin ? "(信用買建)" : ""}`, p.shares, p.entry_price, r.price, r.pct); }) : h("div", { class: "mute" }, "保有なし"),
-      h("div", { class: "row" }, h("span", { class: "mute" }, "現金(記録上)"), h("span", { class: "num" }, yen(s.cash))));
-  },
-  watch() {
-    const w = prefs.watch;
-    return h("div", { class: "panel" }, h("h2", null, "登録銘柄"), w.length ? w.map((c) => h("div", { class: "hit", style: "padding-inline:0" },
-      h("div", { class: "who" }, h("span", { class: "num" }, c), " ", (nameMap && nameMap[c]) || ""),
-      h("div", { class: "acts" }, h("a", { class: "btn", href: yahooUrl(c), target: "_blank", rel: "noopener" }, "Yahoo"),
-        h("button", { class: "btn", "aria-label": "登録を外す", onclick: async () => { const err = await setWatch(c, false); if (err) alert(err); renderHome(true); } }, "✕")))) : h("div", { class: "mute" }, "上の検索から登録できます"));
-  },
-  news() {
-    const D = cache.D; if (!D || !D.news) return null;
-    const holding = D.accounts.some((a) => a.holdings.length) || Object.keys((cache.realState && cache.realState.holdings) || {}).length;
-    if (!holding) return null; // 何も持っていなければ、保有銘柄のニュースは出さない
-    // 「⚠ 銘柄名 (コード)」ごとに折りたたみ、タップで記事を開く
-    const groups = []; let title = ""; const foot = [];
-    D.news.split("\n").forEach((l, i) => {
-      if (i === 0 && l.startsWith("⚠")) title = l.replace(/^⚠\s*/, "");
-      else if (l.startsWith("⚠")) groups.push({ head: l.replace(/^⚠\s*/, ""), body: [] });
-      else if (l.startsWith("※")) foot.push(l);
-      else if (l.trim() && groups.length) groups[groups.length - 1].body.push(l.trim());
-    });
-    if (!groups.length) return h("div", { class: "note" }, D.news);
-    return h("div", { class: "note news" }, h("strong", null, title || "ニュース注意"), groups.map((g) => {
-      const day = (g.body.join("\n").match(/決算発表予定:\s*(\S+)/) || [])[1];
-      const down = g.body.some((b) => b.includes("格下げ"));
-      return h("details", null, h("summary", null, h("span", null, g.head), h("small", null, [day ? `決算 ${day}` : "", down ? "格下げ" : ""].filter(Boolean).join(" ・ "))),
-        g.body.map((b) => h("div", { class: "nl" }, b.replace(/^- /, "")))); }),
-      foot.length ? h("small", { class: "nl" }, foot.join("\n")) : null);
-  },
-};
-function renderLayoutEditor() {
-  onRefresh = null;
-  const list = h("div", { class: "order" });
-  const draw = () => list.replaceChildren(...prefs.order.map((k, i) => h("div", { class: "row" },
-    h("span", { class: prefs.hidden.includes(k) ? "mute" : "" }, SECTIONS[k]),
-    h("span", null,
-      h("button", { "aria-label": "上へ", disabled: i === 0, onclick: () => { [prefs.order[i - 1], prefs.order[i]] = [prefs.order[i], prefs.order[i - 1]]; draw(); } }, "↑"),
-      h("button", { "aria-label": "下へ", disabled: i === prefs.order.length - 1, onclick: () => { [prefs.order[i + 1], prefs.order[i]] = [prefs.order[i], prefs.order[i + 1]]; draw(); } }, "↓"),
-      h("button", { onclick: () => { prefs.hidden = prefs.hidden.includes(k) ? prefs.hidden.filter((x) => x !== k) : [...prefs.hidden, k]; draw(); } }, prefs.hidden.includes(k) ? "出す" : "隠す")))));
-  draw();
-  const msg = h("div");
-  app.replaceChildren(head("表示をカスタマイズ"), h("div", { class: "panel" }, list), msg,
-    h("div", { class: "actions" },
-      h("button", { class: "primary", onclick: async () => {
-        LS.set("kb.prefs", JSON.stringify(prefs)); msg.replaceChildren();
-        try { const r = await putFile("data/app_prefs.json", JSON.stringify(prefs, null, 2) + "\n", cache.prefSha, "アプリ: 表示の設定を更新"); cache.prefSha = r.content.sha; tab = "home"; render(); }
-        catch (e) { msg.replaceChildren(h("div", { class: "err" }, "この端末には保存しましたが、共有はできませんでした。" + explain(e))); }
-      } }, "保存"),
-      h("button", { onclick: render }, "やめる")));
+// 今見ている口座の保有(コード付き)
+function heldList() {
+  const D = cache.D; if (!D) return [];
+  if (scope === "claude") return D.accounts[0].holdings;
+  return Object.keys((cache.realState && cache.realState.holdings) || {}).map((t) => ({ ticker: t }));
+}
+
+// ----- Claude(仮想): 評価額・元本からの増減・チャート・要約 -----
+function claudeTop(D) {
+  const a = D.accounts[0], diff = a.value - a.capital, gap = a.cumulative - D.benchmark.cumulative;
+  return h("div", { class: "panel hero" },
+    h("small", null, `${a.label} · 評価額`),
+    h("div", { class: "big num" }, yen(a.value)),
+    h("div", { class: "delta" }, h("span", { class: "mute" }, `元本 ${yen(a.capital)} から`), h("span", { class: `pill num ${signCls(diff)}` }, `${signYen(diff)} (${pct(a.cumulative)})`)),
+    chartBlock(D, a.capital),
+    h("div", { class: "strip num" },
+      h("div", null, h("small", null, "累積"), h("div", { class: `v ${signCls(a.cumulative)}` }, pct(a.cumulative))),
+      h("div", null, h("small", null, "前日比"), h("div", { class: `v ${signCls(a.day_pnl)}` }, signYen(a.day_pnl))),
+      h("div", null, h("small", null, "ETF比"), h("div", { class: `v ${signCls(gap)}` }, `${gap >= 0 ? "+" : "−"}${Math.abs(gap).toFixed(2)}pt`))));
+}
+// 元本(0%)から今までの推移。タップ・なぞると、その日の増減を円と%で出す
+function chartBlock(D, capital) {
+  const keys = ["live", "benchmark"].filter((k) => D.series[k] && D.series[k].length);
+  if (!keys.length) return h("div", { class: "empty" }, "推移は、日次処理のあとに表示されます");
+  const series = {}; keys.forEach((k) => { const s = D.series[k].slice(); if (s[0][0] > D.started) s.unshift([D.started, 0]); series[k] = s; }); // 元本(0%)から始める
+  const W = 640, H = 200, L = 44, R = 10, T = 12, B = 22;
+  const dates = [...new Set(keys.flatMap((k) => series[k].map((p) => p[0])))].sort();
+  const vals = keys.flatMap((k) => series[k].map((p) => p[1]));
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals); if (hi - lo < 1) { hi += 0.5; lo -= 0.5; }
+  const x = (d) => L + (dates.length < 2 ? 0 : (dates.indexOf(d) / (dates.length - 1)) * (W - L - R));
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const NS = "http://www.w3.org/2000/svg", s = (t, at) => { const e = document.createElementNS(NS, t); Object.entries(at).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": "元本からの増減の推移", class: "chart" });
+  for (let i = 0; i <= 3; i++) { const v = lo + ((hi - lo) * i) / 3;
+    svg.append(s("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--line)", "stroke-width": 1 }));
+    const t = s("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v.toFixed(1) + "%"; svg.append(t); }
+  svg.append(s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "3 3" }));
+  const zt = s("text", { x: W - R, y: y(0) - 5, "text-anchor": "end" }); zt.textContent = "元本"; svg.append(zt);
+  const colors = { live: "var(--c1)", benchmark: "var(--c3)" }, names = { live: "Claude", benchmark: `ETF(${D.labels.benchmark.match(/\d+/)[0]})` };
+  const mainPts = (k) => series[k].map((p) => `${x(p[0])},${y(p[1])}`);
+  if (series.live) { const pts = mainPts("live"); const last = series.live[series.live.length - 1], first = series.live[0];
+    svg.append(s("polygon", { points: `${x(first[0])},${y(0)} ${pts.join(" ")} ${x(last[0])},${y(0)}`, fill: colors.live, opacity: 0.12 })); }
+  keys.forEach((k) => { svg.append(s("polyline", { points: mainPts(k).join(" "), fill: "none", stroke: colors[k], "stroke-width": k === "live" ? 2.4 : 1.6, "stroke-linejoin": "round" }));
+    const last = series[k][series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[k] })); });
+  [dates[0], dates[dates.length - 1]].forEach((d, i) => { const t = s("text", { x: i ? W - R : L, y: H - 5, "text-anchor": i ? "end" : "start" }); t.textContent = d.slice(5).replace("-", "/"); svg.append(t); });
+  const guide = s("line", { y1: T, y2: H - B, stroke: "var(--mute)", "stroke-width": 1, opacity: 0 }); svg.append(guide);
+  const legend = h("div", { class: "legend num" });
+  const fill = (d) => legend.replaceChildren(...keys.map((k) => { const p = series[k].find((q) => q[0] === d) || series[k][series[k].length - 1];
+    return h("span", null, h("i", { style: `background:${colors[k]}` }), `${names[k]} `, h("b", { class: signCls(p[1]) }, `${signYen(p[1] * capital / 100)} (${pct(p[1])})`)); }));
+  fill(dates[dates.length - 1]);
+  const show = (ev) => { const r = svg.getBoundingClientRect(), px = ((ev.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(dates.length - 1, dates.length < 2 ? 0 : Math.round(((px - L) / (W - L - R)) * (dates.length - 1)))); const d = dates[i];
+    guide.setAttribute("x1", x(d)); guide.setAttribute("x2", x(d)); guide.setAttribute("opacity", 1); fill(d); };
+  svg.addEventListener("pointerdown", show); svg.addEventListener("pointermove", show);
+  return h("div", { class: "cb" }, svg, legend);
+}
+
+// ----- 自分(実際・記録上): 通算損益と保有 -----
+function meTop(D) {
+  const s = cache.realState || { cash: 0, holdings: {} };
+  const realized = cache.trades.reduce((sum, t) => sum + (t.side === "sell" ? t.pnl : 0), 0);
+  const info = {}; (D.real || []).forEach((r) => { info[r.ticker] = r; });
+  const unreal = Object.keys(s.holdings || {}).reduce((sum, t) => sum + ((info[t] && info[t].pnl) || 0), 0);
+  const total = realized + unreal, n = Object.keys(s.holdings || {}).length, sells = cache.trades.filter((t) => t.side === "sell").length;
+  return h("div", { class: "panel hero" },
+    h("small", null, "自分(実際・記録上) · 通算損益"),
+    h("div", { class: `big num ${signCls(total)}` }, signYen(total)),
+    h("div", { class: "delta" }, h("span", { class: "mute" }, `決済 ${signYen(realized)} ・ 評価 ${signYen(unreal)}`)),
+    h("div", { class: "empty" }, "推移のグラフは、保有があるあいだ表示されます"),
+    h("div", { class: "strip num" },
+      h("div", null, h("small", null, "保有"), h("div", { class: "v" }, n ? `${n}銘柄` : "なし")),
+      h("div", null, h("small", null, "現金(記録上)"), h("div", { class: "v" }, yen(s.cash))),
+      h("div", null, h("small", null, "決済"), h("div", { class: "v" }, `${sells}件`))));
+}
+
+// ----- タブの中身 -----
+function homeBody() {
+  const D = cache.D; if (!D) return h("div", { class: "none" }, "データがありません");
+  return ({ hold: bodyHold, fills: bodyFills, news: bodyNews, watch: bodyWatch })[htab](D);
+}
+function holdingRow(name, sub, mid, pnl, pctVal) {
+  return h("div", { class: "tr" }, h("div", { class: "nm" }, h("b", null, name), h("small", { class: "num" }, sub)), mid,
+    h("div", { class: `r num ${signCls(pnl)}` }, h("div", { class: "pnl" }, signYen(pnl)), h("small", null, pct(pctVal))));
+}
+function bodyHold(D) {
+  if (scope === "claude") {
+    const a = D.accounts[0], tot = a.holdings.reduce((sum, p) => sum + p.price * p.shares, 0) || 1;
+    return h("div", null, h("div", { class: "hd" }, h("span", null, "銘柄"), h("span", null, "構成比"), h("span", { style: "text-align:right" }, "損益")),
+      a.holdings.length ? a.holdings.map((p) => { const share = (p.price * p.shares) / tot * 100;
+        return holdingRow(p.name, `${p.shares}株 · ${one1(p.price)}`, h("div", null, h("div", { class: "share" }, h("i", { style: `width:${Math.min(100, share * 2)}%` })), h("small", { class: "num" }, share.toFixed(1) + "%")),
+          (p.price - p.entry) * p.shares, p.pct); }) : h("div", { class: "none" }, "保有なし"),
+      a.pending.map((o) => h("div", { class: "tr" }, h("div", { class: "nm" }, h("span", { class: `tag ${o.side}` }, o.side === "buy" ? "買" : "売"), `${o.name} ${o.shares}株`), h("span"), h("small", { class: "r" }, o.reason))),
+      h("div", { class: "foot num" }, h("span", null, "現金"), h("span", null, yen(a.cash))));
+  }
+  const s = cache.realState || { holdings: {}, cash: 0 }, info = {}; (D.real || []).forEach((r) => { info[r.ticker] = r; });
+  const hs = Object.entries(s.holdings || {}), sells = cache.trades.filter((t) => t.side === "sell").slice(0, 5);
+  return h("div", null, h("div", { class: "hd" }, h("span", null, "銘柄"), h("span", null, "取得"), h("span", { style: "text-align:right" }, "損益")),
+    hs.length ? hs.map(([t, p]) => { const r = info[t] || {};
+      return holdingRow(`${r.name || nameOfTicker(t)}${p.margin ? "(信用買建)" : ""}`, `${p.shares}株` + (r.price ? ` · ${one1(r.price)}` : ""), h("small", { class: "num" }, one1(p.entry_price)),
+        r.pnl != null ? r.pnl : 0, r.pct != null ? r.pct : 0); }) : h("div", { class: "none" }, "いま持っている株はありません"),
+    sells.length ? [h("div", { class: "sec" }, "最近の決済"), sells.map((t) => h("div", { class: "tr" }, h("div", { class: "nm" }, h("b", null, nameOfTicker(t.ticker)), h("small", { class: "num" }, `${t.margin ? "信用 返済売り " : "売り "}${t.shares}株`)),
+      h("small", { class: "num" }, "@" + t.price.toLocaleString("ja-JP")), h("div", { class: `r num ${signCls(t.pnl)}` }, h("div", { class: "pnl" }, signYen(t.pnl)), h("small", null, "諸経費込み"))))] : null);
+}
+function bodyFills(D) {
+  if (scope === "claude") return D.fills.length ? h("div", { class: "pad" }, D.fills.map((f) => h("div", { class: "row" },
+    h("span", null, h("span", { class: `tag ${f.side}` }, f.side === "buy" ? "買" : "売"), `${f.name} ${f.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, f.date.slice(5).replace("-", "/"))), h("span", { class: "num" }, one1(f.price))))) : h("div", { class: "none" }, "まだ約定がありません");
+  return cache.trades.length ? h("div", { class: "pad" }, cache.trades.slice(0, 10).map((t) => h("div", { class: "row" },
+    h("span", null, h("span", { class: `tag ${t.side}` }, t.side === "buy" ? "買" : "売"), `${nameOfTicker(t.ticker)} ${t.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, t.date.slice(5).replace("-", "/"))),
+    h("span", { class: "num" }, one1(t.price))))) : h("div", { class: "none" }, "まだ記録がありません");
+}
+// ニュース: 今見ている口座の保有銘柄だけ。「⚠ 銘柄名 (コード)」ごとに折りたたむ
+function newsGroups() {
+  const D = cache.D; if (!D || !D.news) return [];
+  const held = heldList().map((p) => p.ticker), groups = [];
+  D.news.split("\n").forEach((l, i) => {
+    if (i === 0 && l.startsWith("⚠")) return;
+    if (l.startsWith("⚠")) groups.push({ head: l.replace(/^⚠\s*/, ""), body: [] });
+    else if (!l.startsWith("※") && l.trim() && groups.length) groups[groups.length - 1].body.push(l.trim());
+  });
+  return groups.filter((g) => held.some((t) => g.head.includes(`(${t})`)));
+}
+function bodyNews() {
+  const groups = newsGroups();
+  if (!groups.length) return h("div", { class: "none" }, "保有銘柄のニュース注意はありません");
+  return h("div", { class: "news pad" }, groups.map((g) => {
+    const day = (g.body.join("\n").match(/決算発表予定:\s*(\S+)/) || [])[1], down = g.body.some((b) => b.includes("格下げ"));
+    return h("details", null, h("summary", null, h("span", null, g.head), h("small", null, [day ? `決算 ${day}` : "", down ? "格下げ" : ""].filter(Boolean).join(" ・ "))),
+      g.body.map((b) => h("div", { class: "nl" }, b.replace(/^- /, ""))));
+  }), h("small", { class: "mute" }, "言葉の一致による機械的な印です。記事を読んで、ご自身で判断してください。"));
+}
+function bodyWatch() {
+  const w = prefs.watch;
+  return h("div", { class: "pad" }, w.length ? w.map((c) => h("div", { class: "hit", style: "padding-inline:0" },
+    h("div", { class: "who" }, h("span", { class: "num" }, c), " ", (nameMap && nameMap[c]) || ""),
+    h("div", { class: "acts" }, h("a", { class: "btn", href: yahooUrl(c), target: "_blank", rel: "noopener" }, "Yahoo"),
+      h("button", { class: "btn", "aria-label": "登録を外す", onclick: async () => { const err = await setWatch(c, false); if (err) alert(err); drawHome(); } }, "✕")))) : h("div", { class: "none" }, "上の検索から登録できます"));
 }
 
 // ===== 記録 =====
