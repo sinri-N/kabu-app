@@ -15,6 +15,7 @@
   --accent: #2b4a7a; --on-accent: #ffffff; --gain: #b3382c; --loss: #2563a8;
   --ok: #2f7a4d; --warn-bg: #fbeeda; --warn-ink: #7a4a05; --err-bg: #f8dcd8; --err-ink: #8a2a20;
   --c1: #2b4a7a; --c2: #c27a1a; --c3: #8a8f99; --c4: #3a8a6a;
+  --shadow: 0 1px 2px rgba(20, 30, 50, .05);
   --sans: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   --mono: "DM Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
@@ -22,16 +23,16 @@
   --bg: #151922; --panel: #1c212c; --ink: #e6e8ee; --mute: #98a1b2; --line: #2d3443;
   --accent: #8fb0e6; --on-accent: #101626; --gain: #ef7d70; --loss: #7fb2ee;
   --ok: #7ccb98; --warn-bg: #3a2c12; --warn-ink: #f0c987; --err-bg: #3f1f1b; --err-ink: #f2a79e;
-  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; --c4: #6fcf9f; color-scheme: dark; } }
+  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; --c4: #6fcf9f; --line: #3d4559; --shadow: 0 2px 10px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .04); color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #151922; --panel: #1c212c; --ink: #e6e8ee; --mute: #98a1b2; --line: #2d3443;
   --accent: #8fb0e6; --on-accent: #101626; --gain: #ef7d70; --loss: #7fb2ee;
   --ok: #7ccb98; --warn-bg: #3a2c12; --warn-ink: #f0c987; --err-bg: #3f1f1b; --err-ink: #f2a79e;
-  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; --c4: #6fcf9f; color-scheme: dark; }
+  --c1: #8fb0e6; --c2: #e0a04a; --c3: #8f97a6; --c4: #6fcf9f; --line: #3d4559; --shadow: 0 2px 10px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .04); color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { margin: 0; overscroll-behavior-y: contain; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6;
-  padding-block: calc(68px + env(safe-area-inset-top, 0px)) calc(32px + env(safe-area-inset-bottom, 0px));
+  padding-block: calc(68px + env(safe-area-inset-top, 0px)) calc(96px + env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 main { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
@@ -49,7 +50,7 @@ h2 { font-size: 13px; margin: 0 0 8px; color: var(--mute); letter-spacing: .12em
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
 .card .big { font-size: 20px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .card small { color: var(--mute); display: block; overflow-wrap: anywhere; }
-.panel, .card { box-shadow: 0 1px 2px rgba(20, 30, 50, .05); }
+.panel, .card { box-shadow: var(--shadow); }
 .card { display: flex; flex-direction: column; gap: 2px; }
 .card .big { font-size: 22px; font-weight: 500; line-height: 1.3; }
 .card .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 13px; margin-top: 2px; }
@@ -99,9 +100,11 @@ button:disabled { opacity: .5; cursor: default; }
 .chip.run { color: var(--warn-ink); border-color: var(--warn-ink); }
 .bar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; gap: 4px; height: calc(52px + env(safe-area-inset-top, 0px));
   padding: env(safe-area-inset-top, 0px) 12px 0 max(8px, env(safe-area-inset-left, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); }
-.bar #menuBtn { border: 0; background: transparent; width: 44px; padding: 0; display: grid; place-items: center; }
-.bar #menuBtn svg { width: 24px; height: 24px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; }
 .bar h1 { white-space: nowrap; }
+.logo { width: 30px; height: 30px; flex-shrink: 0; margin-left: 4px; }
+.logo rect { fill: var(--accent); } .logo path { stroke: var(--on-accent); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ttl { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; margin-left: 2px; }
+.ttl small { font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .find { position: relative; flex: 1; min-width: 0; max-width: 260px; margin-left: auto; }
 .find input { padding: 7px 12px; border-radius: 99px; }
 .res { position: absolute; right: 0; top: calc(100% + 8px); width: min(360px, calc(100vw - 24px)); max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
@@ -112,14 +115,22 @@ button:disabled { opacity: .5; cursor: default; }
 .btn { display: inline-flex; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; min-height: 40px; color: var(--ink); text-decoration: none; font-size: 14px; cursor: pointer; }
 .btn.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .res .empty { padding: 12px; color: var(--mute); }
-.scrim { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.4); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }
-.drawer { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(280px, 80vw); background: var(--panel); border-right: 1px solid var(--line);
-  padding: calc(16px + env(safe-area-inset-top, 0px)) 0 16px; transform: translateX(-100%); visibility: hidden; transition: transform .2s, visibility .2s; display: flex; flex-direction: column; }
-.drawer h2 { padding: 0 20px 12px; margin: 0; }
-.drawer button { border: 0; border-radius: 0; background: transparent; text-align: left; padding: 12px 20px; min-height: 52px; font-size: 16px; }
-.drawer button[aria-current="page"] { color: var(--accent); font-weight: 700; background: var(--bg); box-shadow: inset 3px 0 0 var(--accent); }
-body.menu-open .scrim { opacity: 1; visibility: visible; }
-body.menu-open .drawer { transform: none; visibility: visible; }
+.tb { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--panel); border-top: 1px solid var(--line); padding: 6px 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
+.tb[hidden] { display: none; }
+.tb button { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 0; border-radius: 0; background: transparent; font-size: 11px; color: var(--mute); padding: 4px 0; min-height: 50px; }
+.tb button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tb button[aria-current="page"] { color: var(--accent); font-weight: 700; }
+.rng { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 14px 0; }
+.rng button { min-height: 32px; padding: 3px 12px; font-size: 12px; border-radius: 99px; color: var(--mute); background: transparent; }
+.rng button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.why { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px 14px 4px; font-size: 12px; }
+.why div { background: var(--bg); border-radius: 8px; padding: 6px 10px; min-width: 0; } .why small { color: var(--mute); } .why b { display: block; font-weight: 500; font-size: 13px; overflow-wrap: anywhere; }
+.tr.two, .hd.two { grid-template-columns: 1.3fr 1fr; }
+.tr.two { cursor: pointer; } .tr.open { border-bottom: 0; background: var(--bg); }
+.chev { color: var(--mute); font-size: 12px; }
+.det { background: var(--bg); padding: 4px 14px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.det .g { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; } .det small { display: block; color: var(--mute); font-size: 11px; }
+.det .acts { display: flex; gap: 6px; flex-wrap: wrap; }
 #ptr { position: fixed; left: 50%; top: calc(52px + env(safe-area-inset-top, 0px)); z-index: 10; width: 36px; height: 36px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line);
   display: grid; place-items: center; opacity: 0; transform: translate(-50%, -48px); pointer-events: none; color: var(--accent); }
 #ptr.snap { transition: transform .2s, opacity .2s; }
@@ -134,12 +145,26 @@ body.menu-open .drawer { transform: none; visibility: visible; }
 .order .row { padding: 4px 0; align-items: center; }
 .order .row > :last-child { display: flex; gap: 6px; }
 .order button { min-height: 36px; padding: 4px 10px; }
-svg text { fill: var(--mute); font-family: var(--mono); font-size: 10px; }
+svg text { fill: var(--mute); font-family: var(--mono); font-size: 11.5px; }
+svg text.gt { fill: var(--ink); font-weight: 500; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; margin-top: 6px; }
 .legend i { display: inline-block; width: 12px; height: 3px; margin-right: 5px; vertical-align: middle; }
 @media (prefers-reduced-motion: no-preference) { .panel, .card { transition: border-color .15s; } }
 .panel.hero { display: flex; flex-direction: column; gap: 4px; padding: 14px 0 0; overflow: hidden; }
-.hero > small, .hero > .big, .hero > .delta { padding-inline: 14px; }
+.hero > small, .hero > .bigrow, .hero > .delta { padding-inline: 14px; }
+.hero .bigrow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+.hero .bigrow .pill { font-size: 14px; font-weight: 500; }
+.panel.hero.up { background: linear-gradient(color-mix(in srgb, var(--gain) 9%, var(--panel)), var(--panel) 75%); }
+.panel.hero.down { background: linear-gradient(color-mix(in srgb, var(--loss) 9%, var(--panel)), var(--panel) 75%); }
+.scope { background: color-mix(in srgb, var(--line) 55%, transparent); padding: 4px; border-radius: 14px; gap: 4px; }
+.scope button { border: 0; background: transparent; border-radius: 10px; color: var(--mute); font-weight: 700; min-height: 46px; }
+.seg2.scope button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
+.badge { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 99px; margin-left: 4px; white-space: nowrap; font-weight: 500; }
+.badge.warn { background: var(--warn-bg); color: var(--warn-ink); } .badge.err { background: var(--err-bg); color: var(--err-ink); }
+.arw { font-size: 10px; margin-right: 3px; }
+.bars { padding: 4px 14px 0; } .bars .sub { margin: 0 0 2px; }
+.themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.themes button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .hero > small { color: var(--mute); }
 .hero .big { font-size: 30px; line-height: 1.25; letter-spacing: -.01em; }
 .delta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 13px; }
@@ -163,7 +188,10 @@ svg text { fill: var(--mute); font-family: var(--mono); font-size: 10px; }
 .tr .r { text-align: right; line-height: 1.4; } .tr .r .pnl { font-size: 14px; } .tr .r small { color: inherit; }
 .share { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-bottom: 3px; } .share i { display: block; height: 100%; background: var(--accent); }
 .sec { padding: 10px 14px 4px; font-size: 12px; color: var(--mute); background: var(--bg); }
-.none { padding: 20px 14px; text-align: center; color: var(--mute); font-size: 14px; }
+.none { padding: 26px 14px; text-align: center; color: var(--mute); font-size: 14px; }
+.none::before { content: ""; display: block; width: 44px; height: 44px; margin: 0 auto 10px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8f99' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 18l5-6 4 3 5-7'/%3E%3Cpath d='M5 21h14'/%3E%3C/svg%3E"); background-size: 26px; background-position: center; background-repeat: no-repeat; }
+.none small { display: block; margin-top: 4px; font-size: 12px; }
 .foot { display: flex; justify-content: space-between; padding: 10px 14px; font-size: 13px; background: var(--bg); }
 .pad { padding: 4px 14px 10px; }
 .pad > small { display: block; margin-top: 8px; }
@@ -171,15 +199,14 @@ svg text { fill: var(--mute); font-family: var(--mono); font-size: 10px; }
 </head>
 <body>
 <header class="bar">
-  <button id="menuBtn" aria-label="メニュー" hidden><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-  <h1 id="title">分身体</h1>
+  <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M6 22l7-8 5 4 8-10"/></svg>
+  <div class="ttl"><h1 id="title">分身体</h1><small id="barSub"></small></div>
   <div class="find" id="find" hidden>
     <input id="q" type="search" placeholder="銘柄検索" autocomplete="off" enterkeyhint="search" aria-label="銘柄検索">
     <div id="res" class="res" hidden></div>
   </div>
 </header>
-<div id="scrim" class="scrim"></div>
-<nav id="drawer" class="drawer" aria-label="メニュー"></nav>
+<nav id="tabbar" class="tb" aria-label="メニュー" hidden></nav>
 <div id="ptr"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></div>
 <main id="app"></main>
 
@@ -190,6 +217,9 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 保存できなくても動く */ } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* 同上 */ } },
 };
+// 表示テーマ: auto(端末に合わせる) / light / dark。この端末だけに覚えておく
+function applyTheme(t) { if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+applyTheme(LS.get("kb.theme"));
 const conn = { repo: LS.get("kb.repo") || "sinri-N/kabu-bunshin", token: LS.get("kb.token") || "" };
 const SECTIONS = { summary: "サマリー(3つの数字)", chart: "推移グラフ", accounts: "仮想口座の保有・注文", fills: "最近の約定", real: "実際の保有(記録上)", news: "ニュース注意", watch: "登録銘柄" };
 const CONFIG_FILES = ["config/paper_config.json", "config/portfolio_config.json", "config/margin_costs.json", "config/live_config.json"];
@@ -258,20 +288,18 @@ function explain(e) {
 
 // ===== 画面の骨組み =====
 const app = document.getElementById("app");
-const drawer = document.getElementById("drawer");
-const menuBtn = document.getElementById("menuBtn");
 const TABS = [["home", "ホーム"], ["record", "記録"], ["config", "設定"], ["run", "実行"]];
 let onRefresh = null; // 引っ張って更新したときに呼ぶ処理(画面ごとに設定。nullなら無効)
 
-const setMenu = (open) => document.body.classList.toggle("menu-open", open);
-menuBtn.addEventListener("click", () => setMenu(true));
-document.getElementById("scrim").addEventListener("click", () => setMenu(false));
-addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
-
+const TAB_ICONS = { home: '<path d="M4 11l8-7 8 7v9H4z"/>', record: '<path d="M12 5v14M5 12h14"/>', config: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>', run: '<path d="M7 5l12 7-12 7z"/>' };
+let prefill = {}; // 保有の詳細から「記録」を開くときの初期値(種類・銘柄)
 function renderTabs() {
-  menuBtn.hidden = !conn.token; document.getElementById("find").hidden = !conn.token;
-  drawer.replaceChildren(h("h2", null, "分身体"), ...TABS.map(([id, label]) =>
-    h("button", { "aria-current": tab === id ? "page" : null, onclick: () => { tab = id; setMenu(false); render(); window.scrollTo(0, 0); } }, label)));
+  const tb = document.getElementById("tabbar");
+  tb.hidden = !conn.token; document.getElementById("find").hidden = !conn.token;
+  tb.replaceChildren(...TABS.map(([id, label]) => {
+    const b = h("button", { "aria-current": tab === id ? "page" : null, onclick: () => { tab = id; render(); window.scrollTo(0, 0); } }, label);
+    b.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 24 24" aria-hidden="true">${TAB_ICONS[id]}</svg>`); return b;
+  }));
 }
 function render() {
   onRefresh = null;
@@ -282,7 +310,8 @@ function render() {
 function head(title, sub) {
   document.getElementById("title").textContent = title;
   document.title = title === "分身体" ? title : `${title} - 分身体`;
-  return sub ? h("p", { class: "sub" }, sub) : document.createDocumentFragment();
+  document.getElementById("barSub").textContent = sub || "";
+  return document.createDocumentFragment();
 }
 
 // ===== 銘柄検索(上のバー): Yahooファイナンスで開く / 登録銘柄に入れる =====
@@ -395,7 +424,7 @@ async function renderHome(quiet) {
 function drawHome() {
   const { D } = cache;
   const nodes = [head("ホーム", D ? `更新 ${D.updated.slice(5).replace("-", "/")}` : "まだデータがありません")];
-  nodes.push(h("div", { class: "seg2", role: "group", "aria-label": "表示する口座" },
+  nodes.push(h("div", { class: "seg2 scope", role: "group", "aria-label": "表示する口座" },
     [["claude", "Claude(仮想)"], ["me", "自分(実際)"]].map(([k, label]) => h("button", { "aria-pressed": String(scope === k), onclick: () => { scope = k; htab = "hold"; LS.set("kb.scope", k); drawHome(); } }, label))));
   if (!D) nodes.push(h("div", { class: "note" }, "まとめのデータがまだありません。実行タブから日次処理を動かすと表示されます。"));
   else nodes.push(scope === "claude" ? claudeTop(D) : meTop(D));
@@ -416,13 +445,26 @@ function heldList() {
   return Object.keys((cache.realState && cache.realState.holdings) || {}).map((t) => ({ ticker: t }));
 }
 
+let range = ["1w", "1m"].includes(LS.get("kb.range")) ? LS.get("kb.range") : "all"; // チャートの表示期間
+let openHold = null; // 詳細を開いている保有の銘柄コード
+// 含み損益がいちばん大きい銘柄(前日比ではなく、取得単価からの損益)
+function whyBox(hs) {
+  if (hs.length < 2) return null;
+  const pl = (p) => (p.price - p.entry) * p.shares, worst = hs.reduce((m, p) => (pl(p) < pl(m) ? p : m)), best = hs.reduce((m, p) => (pl(p) > pl(m) ? p : m));
+  return h("div", { class: "why" },
+    h("div", null, h("small", null, "最大の重し(含み)"), h("b", { class: signCls(pl(worst)) }, `${worst.name} ${signYen(pl(worst))}`)),
+    h("div", null, h("small", null, "最大の支え(含み)"), h("b", { class: signCls(pl(best)) }, `${best.name} ${signYen(pl(best))}`)));
+}
 // ----- Claude(仮想): 評価額・元本からの増減・チャート・要約 -----
 function claudeTop(D) {
   const a = D.accounts[0], diff = a.value - a.capital;
-  return h("div", { class: "panel hero" },
+  return h("div", { class: `panel hero ${diff > 0 ? "up" : diff < 0 ? "down" : ""}` },
     h("small", null, `${a.label} · 評価額`),
-    h("div", { class: "big num" }, yen(a.value)),
+    h("div", { class: "bigrow" }, h("div", { class: "big num" }, yen(a.value)), h("span", { class: `pill num ${signCls(a.day_pnl)}` }, `前日比 ${signYen(a.day_pnl)}`)),
     h("div", { class: "delta" }, h("span", { class: "mute" }, `元本 ${yen(a.capital)} から`), h("span", { class: `pill num ${signCls(diff)}` }, `${signYen(diff)} (${pct(a.cumulative)})`)),
+    whyBox(a.holdings),
+    h("div", { class: "rng", role: "group", "aria-label": "表示期間" }, [["1w", "1週間"], ["1m", "1か月"], ["all", "全期間"]].map(([k, label]) =>
+      h("button", { class: range === k ? "on" : "", "aria-pressed": String(range === k), onclick: () => { range = k; LS.set("kb.range", k); drawHome(); } }, label))),
     chartBlock(D, a.capital),
     h("div", { class: "strip num" },
       h("div", null, h("small", null, "累積"), h("div", { class: `v ${signCls(a.cumulative)}` }, pct(a.cumulative))),
@@ -434,6 +476,9 @@ function chartBlock(D, capital) {
   const keys = ["live"].filter((k) => D.series[k] && D.series[k].length);
   if (!keys.length) return h("div", { class: "empty" }, "推移は、日次処理のあとに表示されます");
   const series = {}; keys.forEach((k) => { const s = D.series[k].slice(); if (s[0][0] > D.started) s.unshift([D.started, 0]); series[k] = s; }); // 元本(0%)から始める
+  const days = range === "1w" ? 7 : range === "1m" ? 31 : 0;
+  if (days) { const end = series.live[series.live.length - 1][0], cut = new Date(new Date(end).getTime() - days * 864e5).toISOString().slice(0, 10);
+    keys.forEach((k) => { const part = series[k].filter((p) => p[0] >= cut); if (part.length >= 2) series[k] = part; }); }
   const W = 640, H = 200, L = 44, R = 10, T = 12, B = 22;
   const dates = [...new Set(keys.flatMap((k) => series[k].map((p) => p[0])))].sort();
   const vals = keys.flatMap((k) => series[k].map((p) => p[1]));
@@ -453,20 +498,38 @@ function chartBlock(D, capital) {
     svg.append(s("polygon", { points: `${x(first[0])},${y(0)} ${pts.join(" ")} ${x(last[0])},${y(0)}`, fill: colors.live, opacity: 0.12 })); }
   keys.forEach((k) => { svg.append(s("polyline", { points: mainPts(k).join(" "), fill: "none", stroke: colors[k], "stroke-width": k === "live" ? 2.4 : 1.6, "stroke-linejoin": "round" }));
     const last = series[k][series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[k] })); });
-  [dates[0], dates[dates.length - 1]].forEach((d, i) => { const t = s("text", { x: i ? W - R : L, y: H - 5, "text-anchor": i ? "end" : "start" }); t.textContent = d.slice(5).replace("-", "/"); svg.append(t); });
+  const ticks = dates.length > 6 ? [0, Math.round((dates.length - 1) / 2), dates.length - 1] : [0, dates.length - 1];
+  ticks.forEach((i, n) => { const d = dates[i], t = s("text", { x: x(d), y: H - 5, "text-anchor": n === 0 ? "start" : i === dates.length - 1 ? "end" : "middle" }); t.textContent = d.slice(5).replace("-", "/"); svg.append(t); });
   const guide = s("line", { y1: T, y2: H - B, stroke: "var(--mute)", "stroke-width": 1, opacity: 0 }); svg.append(guide);
+  const mk = s("circle", { r: 5, fill: "var(--c1)", stroke: "var(--panel)", "stroke-width": 2, opacity: 0 }); svg.append(mk);
+  const gt = s("text", { y: T + 9, class: "gt", opacity: 0 }); svg.append(gt);
   const legend = h("div", { class: "legend num" });
-  const fill = (d) => legend.replaceChildren(...keys.map((k) => { const p = series[k].find((q) => q[0] === d) || series[k][series[k].length - 1];
+  const fill = (d) => legend.replaceChildren(h("span", { class: "mute" }, d.slice(5).replace("-", "/")), ...keys.map((k) => { const p = series[k].find((q) => q[0] === d) || series[k][series[k].length - 1];
     const yenVal = d === dates[dates.length - 1] ? D.accounts[0].value - capital : p[1] * capital / 100; // 最新日は実際の金額(割合からの換算だと数円ずれる)
     return h("span", null, h("i", { style: `background:${colors[k]}` }), `${names[k]} `, h("b", { class: signCls(p[1]) }, `${signYen(yenVal)} (${pct(p[1])})`)); }));
   fill(dates[dates.length - 1]);
   const show = (ev) => { const r = svg.getBoundingClientRect(), px = ((ev.clientX - r.left) / r.width) * W;
     const i = Math.max(0, Math.min(dates.length - 1, dates.length < 2 ? 0 : Math.round(((px - L) / (W - L - R)) * (dates.length - 1)))); const d = dates[i];
-    guide.setAttribute("x1", x(d)); guide.setAttribute("x2", x(d)); guide.setAttribute("opacity", 1); fill(d); };
+    guide.setAttribute("x1", x(d)); guide.setAttribute("x2", x(d)); guide.setAttribute("opacity", 1); fill(d);
+    const p = series.live.find((q) => q[0] === d);
+    if (p) { mk.setAttribute("cx", x(d)); mk.setAttribute("cy", y(p[1])); mk.setAttribute("opacity", 1); }
+    gt.textContent = d.slice(5).replace("-", "/"); gt.setAttribute("x", x(d) + (i > dates.length / 2 ? -6 : 6)); gt.setAttribute("text-anchor", i > dates.length / 2 ? "end" : "start"); gt.setAttribute("opacity", 1); };
   svg.addEventListener("pointerdown", show); svg.addEventListener("pointermove", show);
   return h("div", { class: "cb" }, svg, legend);
 }
 
+// 直近の決済ごとの損益を棒で並べる(推移グラフの代わり)
+function settleBars() {
+  const sells = cache.trades.filter((t) => t.side === "sell").slice(0, 12).reverse();
+  if (!sells.length) return h("div", { class: "empty" }, "決済すると、ここに1回ごとの損益が棒で並びます");
+  const W = 640, H = 96, mid = H / 2, max = Math.max(...sells.map((t) => Math.abs(t.pnl)), 1), bw = Math.min(40, (W - 20) / sells.length - 8);
+  const NS = "http://www.w3.org/2000/svg", s = (t, at) => { const e = document.createElementNS(NS, t); Object.entries(at).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": "直近の決済損益", class: "chart" });
+  svg.append(s("line", { x1: 0, x2: W, y1: mid, y2: mid, stroke: "var(--line)", "stroke-width": 1 }));
+  sells.forEach((t, i) => { const bh = Math.max(2, (Math.abs(t.pnl) / max) * (mid - 6)), cx = 10 + (i + 0.5) * ((W - 20) / sells.length);
+    svg.append(s("rect", { x: cx - bw / 2, y: t.pnl >= 0 ? mid - bh : mid, width: bw, height: bh, rx: 3, fill: t.pnl >= 0 ? "var(--gain)" : "var(--loss)", opacity: 0.85 })); });
+  return h("div", { class: "bars" }, h("p", { class: "sub" }, `直近${sells.length}回の決済損益`), svg);
+}
 // ----- 自分(実際・記録上): 通算損益と保有 -----
 function meTop(D) {
   const s = cache.realState || { cash: 0, holdings: {} };
@@ -474,11 +537,11 @@ function meTop(D) {
   const info = {}; (D.real || []).forEach((r) => { info[r.ticker] = r; });
   const unreal = Object.keys(s.holdings || {}).reduce((sum, t) => sum + ((info[t] && info[t].pnl) || 0), 0);
   const total = realized + unreal, n = Object.keys(s.holdings || {}).length, sells = cache.trades.filter((t) => t.side === "sell").length;
-  return h("div", { class: "panel hero" },
+  return h("div", { class: `panel hero ${total > 0 ? "up" : total < 0 ? "down" : ""}` },
     h("small", null, "自分(実際・記録上) · 通算損益"),
-    h("div", { class: `big num ${signCls(total)}` }, signYen(total)),
+    h("div", { class: "bigrow" }, h("div", { class: `big num ${signCls(total)}` }, signYen(total))),
     h("div", { class: "delta" }, h("span", { class: "mute" }, `決済 ${signYen(realized)} ・ 評価 ${signYen(unreal)}`)),
-    h("div", { class: "empty" }, "推移のグラフは、保有があるあいだ表示されます"),
+    settleBars(),
     h("div", { class: "strip num" },
       h("div", null, h("small", null, "保有"), h("div", { class: "v" }, n ? `${n}銘柄` : "なし")),
       h("div", null, h("small", null, "現金(記録上)"), h("div", { class: "v" }, yen(s.cash))),
@@ -490,35 +553,48 @@ function homeBody() {
   const D = cache.D; if (!D) return h("div", { class: "none" }, "データがありません");
   return ({ hold: bodyHold, fills: bodyFills, news: bodyNews, watch: bodyWatch })[htab](D);
 }
-function holdingRow(name, sub, mid, pnl, pctVal) {
-  return h("div", { class: "tr" }, h("div", { class: "nm" }, h("b", null, name), h("small", { class: "num" }, sub)), mid,
-    h("div", { class: `r num ${signCls(pnl)}` }, h("div", { class: "pnl" }, signYen(pnl)), h("small", null, pct(pctVal))));
+// 行をタップすると、その下に詳細(取得単価など)と操作ボタンが開く
+function holdingRow(key, name, sub, pnl, pctVal, detail) {
+  const open = openHold === key, toggle = () => { openHold = open ? null : key; drawHome(); };
+  const row = h("div", { class: "tr two" + (open ? " open" : ""), role: "button", tabindex: "0", "aria-expanded": String(open), onclick: toggle,
+    onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } } },
+    h("div", { class: "nm" }, h("b", null, name, " ", h("span", { class: "chev" }, open ? "⌃" : "⌄")), h("small", { class: "num" }, sub)),
+    h("div", { class: `r num ${signCls(pnl)}` }, h("div", { class: "pnl" }, pnl ? h("span", { class: "arw" }, pnl > 0 ? "▲" : "▼") : null, signYen(pnl)), h("small", null, pct(pctVal))));
+  return open ? [row, detail] : row;
+}
+function holdDetail(cells, code, withRecord) {
+  const go = (kind) => () => { prefill = { kind, ticker: code }; tab = "record"; render(); window.scrollTo(0, 0); };
+  return h("div", { class: "det" }, h("div", { class: "g num" }, cells.map(([l, v]) => h("div", null, h("small", null, l), v))),
+    h("div", { class: "acts" }, h("a", { class: "btn", href: yahooUrl(code), target: "_blank", rel: "noopener" }, "Yahoo"),
+      withRecord ? [h("button", { class: "btn", onclick: go("buy") }, "買い増しを記録"), h("button", { class: "btn", onclick: go("sell") }, "売りを記録")] : null,
+      h("button", { class: "btn", onclick: () => { htab = "news"; drawHome(); } }, "ニュース")));
 }
 function bodyHold(D) {
   if (scope === "claude") {
-    const a = D.accounts[0], tot = a.holdings.reduce((sum, p) => sum + p.price * p.shares, 0) || 1;
-    return h("div", null, h("div", { class: "hd" }, h("span", null, "銘柄"), h("span", null, "構成比"), h("span", { style: "text-align:right" }, "損益")),
-      a.holdings.length ? a.holdings.map((p) => { const share = (p.price * p.shares) / tot * 100;
-        return holdingRow(p.name, `${p.shares}株 · ${one1(p.price)}`, h("div", null, h("div", { class: "share" }, h("i", { style: `width:${Math.min(100, share * 2)}%` })), h("small", { class: "num" }, share.toFixed(1) + "%")),
-          (p.price - p.entry) * p.shares, p.pct); }) : h("div", { class: "none" }, "保有なし"),
-      a.pending.map((o) => h("div", { class: "tr" }, h("div", { class: "nm" }, h("span", { class: `tag ${o.side}` }, o.side === "buy" ? "買" : "売"), `${o.name} ${o.shares}株`), h("span"), h("small", { class: "r" }, o.reason))),
+    const a = D.accounts[0];
+    return h("div", null, h("div", { class: "hd two" }, h("span", null, "銘柄 / 評価額"), h("span", { style: "text-align:right" }, "損益")),
+      a.holdings.length ? a.holdings.map((p) => { const bought = D.fills.filter((f) => f.name === p.name && f.side === "buy").map((f) => f.date).sort().pop();
+        return holdingRow(p.ticker, p.name, `${p.shares}株 · 評価 ${yen(p.price * p.shares)}`, (p.price - p.entry) * p.shares, p.pct,
+          holdDetail([["取得単価", one1(p.entry)], ["現在値", one1(p.price)], ["取得日", bought ? bought.slice(5).replace("-", "/") : "-"]], shortCode(p.ticker), true)); }) : h("div", { class: "none" }, "保有なし", h("small", null, "Claudeが買うと、ここに並びます")),
+      a.pending.map((o) => h("div", { class: "tr two" }, h("div", { class: "nm" }, h("span", { class: `tag ${o.side}` }, o.side === "buy" ? "買" : "売"), `${o.name} ${o.shares}株`), h("small", { class: "r" }, o.reason))),
       null);
   }
   const s = cache.realState || { holdings: {}, cash: 0 }, info = {}; (D.real || []).forEach((r) => { info[r.ticker] = r; });
   const hs = Object.entries(s.holdings || {}), sells = cache.trades.filter((t) => t.side === "sell").slice(0, 5);
-  return h("div", null, h("div", { class: "hd" }, h("span", null, "銘柄"), h("span", null, "取得"), h("span", { style: "text-align:right" }, "損益")),
+  return h("div", null, h("div", { class: "hd two" }, h("span", null, "銘柄 / 評価額"), h("span", { style: "text-align:right" }, "損益")),
     hs.length ? hs.map(([t, p]) => { const r = info[t] || {};
-      return holdingRow(`${r.name || nameOfTicker(t)}${p.margin ? "(信用買建)" : ""}`, `${p.shares}株` + (r.price ? ` · ${one1(r.price)}` : ""), h("small", { class: "num" }, one1(p.entry_price)),
-        r.pnl != null ? r.pnl : 0, r.pct != null ? r.pct : 0); }) : h("div", { class: "none" }, "いま持っている株はありません"),
+      return holdingRow(t, `${r.name || nameOfTicker(t)}${p.margin ? "(信用買建)" : ""}`, `${p.shares}株` + (r.price ? ` · 評価 ${yen(r.price * p.shares)}` : ""),
+        r.pnl != null ? r.pnl : 0, r.pct != null ? r.pct : 0,
+        holdDetail([["取得単価", one1(p.entry_price)], ["現在値", r.price ? one1(r.price) : "-"], ["区分", p.margin ? "信用買建" : "現物"]], shortCode(t), true)); }) : h("div", { class: "none" }, "いま持っている株はありません", h("small", null, "記録タブから買いを記録できます")),
     sells.length ? [h("div", { class: "sec" }, "最近の決済"), sells.map((t) => h("div", { class: "tr" }, h("div", { class: "nm" }, h("b", null, nameOfTicker(t.ticker)), h("small", { class: "num" }, `${t.margin ? "信用 返済売り " : "売り "}${t.shares}株`)),
       h("small", { class: "num" }, "@" + t.price.toLocaleString("ja-JP")), h("div", { class: `r num ${signCls(t.pnl)}` }, h("div", { class: "pnl" }, signYen(t.pnl)), h("small", null, "諸経費込み"))))] : null);
 }
 function bodyFills(D) {
   if (scope === "claude") return D.fills.length ? h("div", { class: "pad" }, D.fills.map((f) => h("div", { class: "row" },
-    h("span", null, h("span", { class: `tag ${f.side}` }, f.side === "buy" ? "買" : "売"), `${f.name} ${f.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, f.date.slice(5).replace("-", "/"))), h("span", { class: "num" }, one1(f.price))))) : h("div", { class: "none" }, "まだ約定がありません");
+    h("span", null, h("span", { class: `tag ${f.side}` }, f.side === "buy" ? "買" : "売"), `${f.name} ${f.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, f.date.slice(5).replace("-", "/"))), h("span", { class: "num" }, one1(f.price))))) : h("div", { class: "none" }, "まだ約定がありません", h("small", null, "Claudeの注文が約定すると、ここに出ます"));
   return cache.trades.length ? h("div", { class: "pad" }, cache.trades.slice(0, 10).map((t) => h("div", { class: "row" },
     h("span", null, h("span", { class: `tag ${t.side}` }, t.side === "buy" ? "買" : "売"), `${nameOfTicker(t.ticker)} ${t.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, t.date.slice(5).replace("-", "/"))),
-    h("span", { class: "num" }, one1(t.price))))) : h("div", { class: "none" }, "まだ記録がありません");
+    h("span", { class: "num" }, one1(t.price))))) : h("div", { class: "none" }, "まだ記録がありません", h("small", null, "記録タブから売買を記録できます"));
 }
 // ニュース: 今見ている口座の保有銘柄だけ。「⚠ 銘柄名 (コード)」ごとに折りたたむ
 function newsGroups() {
@@ -533,10 +609,10 @@ function newsGroups() {
 }
 function bodyNews() {
   const groups = newsGroups();
-  if (!groups.length) return h("div", { class: "none" }, "保有銘柄のニュース注意はありません");
+  if (!groups.length) return h("div", { class: "none" }, "保有銘柄のニュース注意はありません", h("small", null, "決算前や格下げがあると、ここに出ます"));
   return h("div", { class: "news pad" }, groups.map((g) => {
     const day = (g.body.join("\n").match(/決算発表予定:\s*(\S+)/) || [])[1], down = g.body.some((b) => b.includes("格下げ"));
-    return h("details", null, h("summary", null, h("span", null, g.head), h("small", null, [day ? `決算 ${day}` : "", down ? "格下げ" : ""].filter(Boolean).join(" ・ "))),
+    return h("details", null, h("summary", null, h("span", null, g.head), h("span", null, day ? h("span", { class: "badge warn" }, `決算 ${day}`) : null, down ? h("span", { class: "badge err" }, "格下げ") : null)),
       g.body.map((b) => h("div", { class: "nl" }, b.replace(/^- /, ""))));
   }), h("small", { class: "mute" }, "言葉の一致による機械的な印です。記事を読んで、ご自身で判断してください。"));
 }
@@ -545,7 +621,7 @@ function bodyWatch() {
   return h("div", { class: "pad" }, w.length ? w.map((c) => h("div", { class: "hit", style: "padding-inline:0" },
     h("div", { class: "who" }, h("span", { class: "num" }, c), " ", (nameMap && nameMap[c]) || ""),
     h("div", { class: "acts" }, h("a", { class: "btn", href: yahooUrl(c), target: "_blank", rel: "noopener" }, "Yahoo"),
-      h("button", { class: "btn", "aria-label": "登録を外す", onclick: async () => { const err = await setWatch(c, false); if (err) alert(err); drawHome(); } }, "✕")))) : h("div", { class: "none" }, "上の検索から登録できます"));
+      h("button", { class: "btn", "aria-label": "登録を外す", onclick: async () => { const err = await setWatch(c, false); if (err) alert(err); drawHome(); } }, "✕")))) : h("div", { class: "none" }, "登録銘柄はまだありません", h("small", null, "上の検索から追加できます")));
 }
 
 // ===== 記録 =====
@@ -566,13 +642,15 @@ async function loadNames() {
 const code4 = (s) => s.trim().replace(/\.T$/i, "").toUpperCase();
 
 function renderRecord() {
-  let kind = "buy"; let step = "edit"; let margin = false; let held = [];
+  const pf = prefill; prefill = {};
+  let kind = pf.kind || "buy"; let step = "edit"; let margin = false; let held = [];
   onRefresh = () => loadHistory();
   const f = { date: h("input", { id: "date", type: "date", value: todayJst() }), ticker: h("input", { id: "ticker", inputmode: "numeric", placeholder: "例 5801", autocomplete: "off" }),
     shares: h("input", { id: "shares", type: "number", inputmode: "numeric", min: "1", step: "1", placeholder: "100" }), price: h("input", { id: "price", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "約定単価" }),
     amount: h("input", { id: "amount", type: "number", inputmode: "numeric", min: "1", step: "1", placeholder: "金額(円)" }),
     fee: h("input", { id: "fee", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "0" }), tax: h("input", { id: "tax", type: "number", inputmode: "decimal", min: "0", step: "any", placeholder: "0" }) };
   f.ticker.setAttribute("enterkeyhint", "next");
+  if (pf.ticker) f.ticker.value = pf.ticker;
   const sug = h("div", { class: "sug", hidden: true }); const hint = h("small", { class: "mute" });
   const nameOf = (c) => (nameMap && nameMap[c]) || "";
   function showSug() {
@@ -668,6 +746,9 @@ function renderConfig() {
   app.replaceChildren(head("設定", "変更は次の日次処理から反映"),
     h("div", { class: "panel form" }, h("label", null, "ファイル", sel), ta,
       msg, h("div", { class: "actions" }, h("button", { class: "primary", onclick: save }, "保存"), h("button", { onclick: load }, "元に戻す"))),
+    h("div", { class: "panel form" }, h("h2", null, "表示テーマ"),
+      h("div", { class: "themes", role: "group", "aria-label": "表示テーマ" }, [["auto", "自動"], ["light", "ライト"], ["dark", "ダーク"]].map(([k, label]) =>
+        h("button", { "aria-pressed": String((LS.get("kb.theme") || "auto") === k), onclick: () => { LS.set("kb.theme", k); applyTheme(k); renderConfig(); } }, label)))),
     h("div", { class: "panel form" }, h("h2", null, conn.repo),
       h("div", { class: "actions" }, h("button", { onclick: () => { LS.del("kb.token"); conn.token = ""; render(); } }, "つなぎ直す"))));
   load();
