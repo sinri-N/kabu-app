@@ -195,6 +195,16 @@ svg text.gt { fill: var(--ink); font-weight: 500; }
 .foot { display: flex; justify-content: space-between; padding: 10px 14px; font-size: 13px; background: var(--bg); }
 .pad { padding: 4px 14px 10px; }
 .pad > small { display: block; margin-top: 8px; }
+.seg2.scope button { font-size: 13px; padding-inline: 2px; line-height: 1.25; }
+.panel.dec { padding: 12px 14px; font-size: 14px; } .panel.dec p { margin: 6px 0 0; }
+.sec2 { font-size: 12px; color: var(--mute); }
+.refl small, .why1 small { display: block; color: var(--mute); font-size: 11px; }
+.panel.dec .rej { margin-top: 8px; font-size: 13px; } .rej small { display: block; color: var(--mute); font-size: 11px; } .rej div { color: var(--warn-ink); }
+.warnline { margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; }
+.rules { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; font-size: 13px; } .rules summary { cursor: pointer; color: var(--mute); }
+.rules ul { margin: 6px 0 0; padding-left: 18px; } .rules li { margin: 3px 0; }
+.frow { padding: 4px 0; border-bottom: 1px solid var(--line); } .frow .row { border: 0; padding: 2px 0; } .frow > small { display: block; font-size: 12px; line-height: 1.45; padding-bottom: 4px; }
+.why1 { margin: 8px 0 0; font-size: 13px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -396,8 +406,8 @@ function renderConnect() {
 }
 
 // ===== ホーム =====
-// 上のスイッチで「Claude(仮想)」と「自分(実際・記録上)」を切り替える。切り替えると、評価額・チャート・要約・表がすべて入れ替わる。
-let scope = LS.get("kb.scope") === "me" ? "me" : "claude";
+// 上のスイッチで「自分(実際・記録上)」と、Claudeの仮想口座(3つ)を切り替える。切り替えると、評価額・チャート・要約・表がすべて入れ替わる。
+let scope = LS.get("kb.scope") || "me"; // "me" か、仮想口座のキー(claude_plus など)
 let htab = "hold"; // 保有 / 約定 / ニュース / 登録
 const signYen = (n) => `${n >= 0 ? "+" : "−"}${Math.abs(Math.round(n)).toLocaleString("ja-JP")}円`;
 const one1 = (n) => (Math.round(n * 10) / 10).toLocaleString("ja-JP") + "円";
@@ -421,13 +431,17 @@ async function renderHome(quiet) {
   if (tab !== "home" || !onRefresh) return; // 読み込み中に別の画面へ移っていたら描き直さない
   drawHome();
 }
+const acctOf = (D) => (D && D.accounts.find((a) => a.key === scope)) || null; // 今見ている仮想口座(自分のときは null)
 function drawHome() {
   const { D } = cache;
+  if (D && scope !== "me" && !acctOf(D)) scope = "me"; // 保存してあった口座がなくなっていたら「自分」に戻す
   const nodes = [head("ホーム", D ? `更新 ${D.updated.slice(5).replace("-", "/")}` : "まだデータがありません")];
-  nodes.push(h("div", { class: "seg2 scope", role: "group", "aria-label": "表示する口座" },
-    [["claude", "Claude(仮想)"], ["me", "自分(実際)"]].map(([k, label]) => h("button", { "aria-pressed": String(scope === k), onclick: () => { scope = k; htab = "hold"; LS.set("kb.scope", k); drawHome(); } }, label))));
+  const choices = [["me", "自分(実際)"]].concat(D ? D.accounts.map((a) => [a.key, a.short]) : []);
+  nodes.push(h("div", { class: "seg2 scope", role: "group", "aria-label": "表示する口座", style: `grid-template-columns: repeat(${choices.length}, 1fr)` },
+    choices.map(([k, label]) => h("button", { "aria-pressed": String(scope === k), onclick: () => { scope = k; htab = "hold"; openHold = null; LS.set("kb.scope", k); drawHome(); } }, label))));
   if (!D) nodes.push(h("div", { class: "note" }, "まとめのデータがまだありません。実行タブから日次処理を動かすと表示されます。"));
-  else nodes.push(scope === "claude" ? claudeTop(D) : meTop(D));
+  else if (scope === "me") nodes.push(meTop(D));
+  else nodes.push(virtualTop(D, acctOf(D)), decisionBox(acctOf(D)));
   const tabs = [["hold", "保有"], ["fills", "約定"], ["news", "ニュース"], ["watch", "登録"]];
   nodes.push(h("div", { class: "panel flush" },
     h("div", { class: "htabs", role: "tablist" }, tabs.map(([k, label]) => h("button", { role: "tab", "aria-selected": String(htab === k), onclick: () => { htab = k; drawHome(); } }, label, tabCount(k)))),
@@ -441,7 +455,7 @@ function tabCount(k) {
 // 今見ている口座の保有(コード付き)
 function heldList() {
   const D = cache.D; if (!D) return [];
-  if (scope === "claude") return D.accounts[0].holdings;
+  if (scope !== "me") return acctOf(D).holdings;
   return Object.keys((cache.realState && cache.realState.holdings) || {}).map((t) => ({ ticker: t }));
 }
 
@@ -456,28 +470,43 @@ function whyBox(hs) {
     h("div", null, h("small", null, "最大の支え(含み)"), h("b", { class: signCls(pl(best)) }, `${best.name} ${signYen(pl(best))}`)));
 }
 // ----- Claude(仮想): 評価額・元本からの増減・チャート・要約 -----
-function claudeTop(D) {
-  const a = D.accounts[0], diff = a.value - a.capital;
+function virtualTop(D, a) {
+  const diff = a.value - a.capital;
   return h("div", { class: `panel hero ${diff > 0 ? "up" : diff < 0 ? "down" : ""}` },
-    h("small", null, `${a.label} · 評価額`),
+    h("small", null, `${a.label}(仮想) · 評価額`),
     h("div", { class: "bigrow" }, h("div", { class: "big num" }, yen(a.value)), h("span", { class: `pill num ${signCls(a.day_pnl)}` }, `前日比 ${signYen(a.day_pnl)}`)),
     h("div", { class: "delta" }, h("span", { class: "mute" }, `元本 ${yen(a.capital)} から`), h("span", { class: `pill num ${signCls(diff)}` }, `${signYen(diff)} (${pct(a.cumulative)})`)),
     whyBox(a.holdings),
     h("div", { class: "rng", role: "group", "aria-label": "表示期間" }, [["1w", "1週間"], ["1m", "1か月"], ["all", "全期間"]].map(([k, label]) =>
       h("button", { class: range === k ? "on" : "", "aria-pressed": String(range === k), onclick: () => { range = k; LS.set("kb.range", k); drawHome(); } }, label))),
-    chartBlock(D, a.capital),
+    chartBlock(D, a),
     h("div", { class: "strip num" },
       h("div", null, h("small", null, "累積"), h("div", { class: `v ${signCls(a.cumulative)}` }, pct(a.cumulative))),
       h("div", null, h("small", null, "前日比"), h("div", { class: `v ${signCls(a.day_pnl)}` }, signYen(a.day_pnl))),
       h("div", null, h("small", null, "現金"), h("div", { class: "v" }, yen(a.cash)))));
 }
+// 今日の判断(相場の見方・見送った提案・振り返り)と、この口座に強制しているルール
+function decisionBox(a) {
+  const d = a.decision, day = d ? d.date.slice(5).replace("-", "/") : "";
+  return h("div", { class: "panel dec" },
+    h("div", { class: "sec2" }, d ? `${day} ${d.time || "引け後"} の判断` : "今日の判断"),
+    d ? [d.error ? h("div", { class: "warnline" }, `Claudeの判断を取得できませんでした(${d.error})。損切りの自動売りだけ実行します。`) : null,
+      d.summary ? h("p", null, d.summary) : null,
+      d.reflection ? h("p", { class: "refl" }, h("small", null, "振り返り"), d.reflection) : null,
+      d.rejected && d.rejected.length ? h("div", { class: "rej" }, h("small", null, `ルールで見送った提案 ${d.rejected.length}件`), d.rejected.map((r) => h("div", null, `${r.name}: ${r.text.replace(/^(買い|売り)(提案|増し)?を?見送り/, "").replace(/^[((]|[))]$/g, "")}`))) : null]
+      : h("p", { class: "mute" }, "判断はまだありません。次の判断(平日9:15・13:00・14:45)のあとに表示されます。"),
+    h("details", { class: "rules" }, h("summary", null, "この口座のルール"),
+      a.note ? h("p", { class: "mute" }, a.note) : null,
+      h("ul", null, a.rules.map((r) => h("li", null, r)))));
+}
 // 元本(0%)から今までの推移。タップ・なぞると、その日の増減を円と%で出す
-function chartBlock(D, capital) {
-  const keys = ["live"].filter((k) => D.series[k] && D.series[k].length);
-  if (!keys.length) return h("div", { class: "empty" }, "推移は、日次処理のあとに表示されます");
+function chartBlock(D, acct) {
+  const capital = acct.capital, main = acct.key, COLORS = ["var(--c1)", "var(--c2)", "var(--c4)"];
+  const keys = D.accounts.map((a) => a.key).filter((k) => D.series[k] && D.series[k].length); // 3口座を並べて見せる(今の口座を太く)
+  if (!keys.includes(main)) return h("div", { class: "empty" }, "推移は、日次処理のあとに表示されます");
   const series = {}; keys.forEach((k) => { const s = D.series[k].slice(); if (s[0][0] > D.started) s.unshift([D.started, 0]); series[k] = s; }); // 元本(0%)から始める
   const days = range === "1w" ? 7 : range === "1m" ? 31 : 0;
-  if (days) { const end = series.live[series.live.length - 1][0], cut = new Date(new Date(end).getTime() - days * 864e5).toISOString().slice(0, 10);
+  if (days) { const end = series[main][series[main].length - 1][0], cut = new Date(new Date(end).getTime() - days * 864e5).toISOString().slice(0, 10);
     keys.forEach((k) => { const part = series[k].filter((p) => p[0] >= cut); if (part.length >= 2) series[k] = part; }); }
   const W = 640, H = 200, L = 44, R = 10, T = 12, B = 22;
   const dates = [...new Set(keys.flatMap((k) => series[k].map((p) => p[0])))].sort();
@@ -492,26 +521,26 @@ function chartBlock(D, capital) {
     const t = s("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v.toFixed(1) + "%"; svg.append(t); }
   svg.append(s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "3 3" }));
   const zt = s("text", { x: W - R, y: y(0) - 5, "text-anchor": "end" }); zt.textContent = "元本"; svg.append(zt);
-  const colors = { live: "var(--c1)" }, names = { live: "Claude" };
+  const colors = {}, names = {}; D.accounts.forEach((a, i) => { colors[a.key] = COLORS[i % 3]; names[a.key] = a.short; });
   const mainPts = (k) => series[k].map((p) => `${x(p[0])},${y(p[1])}`);
-  if (series.live) { const pts = mainPts("live"); const last = series.live[series.live.length - 1], first = series.live[0];
-    svg.append(s("polygon", { points: `${x(first[0])},${y(0)} ${pts.join(" ")} ${x(last[0])},${y(0)}`, fill: colors.live, opacity: 0.12 })); }
-  keys.forEach((k) => { svg.append(s("polyline", { points: mainPts(k).join(" "), fill: "none", stroke: colors[k], "stroke-width": k === "live" ? 2.4 : 1.6, "stroke-linejoin": "round" }));
-    const last = series[k][series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: 3.5, fill: colors[k] })); });
+  { const pts = mainPts(main); const last = series[main][series[main].length - 1], first = series[main][0];
+    svg.append(s("polygon", { points: `${x(first[0])},${y(0)} ${pts.join(" ")} ${x(last[0])},${y(0)}`, fill: colors[main], opacity: 0.12 })); }
+  keys.slice().sort((a, b) => (a === main) - (b === main)).forEach((k) => { svg.append(s("polyline", { points: mainPts(k).join(" "), fill: "none", stroke: colors[k], "stroke-width": k === main ? 2.4 : 1.4, "stroke-linejoin": "round", opacity: k === main ? 1 : 0.65 }));
+    const last = series[k][series[k].length - 1]; svg.append(s("circle", { cx: x(last[0]), cy: y(last[1]), r: k === main ? 3.5 : 2.5, fill: colors[k] })); });
   const ticks = dates.length > 6 ? [0, Math.round((dates.length - 1) / 2), dates.length - 1] : [0, dates.length - 1];
   ticks.forEach((i, n) => { const d = dates[i], t = s("text", { x: x(d), y: H - 5, "text-anchor": n === 0 ? "start" : i === dates.length - 1 ? "end" : "middle" }); t.textContent = d.slice(5).replace("-", "/"); svg.append(t); });
   const guide = s("line", { y1: T, y2: H - B, stroke: "var(--mute)", "stroke-width": 1, opacity: 0 }); svg.append(guide);
-  const mk = s("circle", { r: 5, fill: "var(--c1)", stroke: "var(--panel)", "stroke-width": 2, opacity: 0 }); svg.append(mk);
+  const mk = s("circle", { r: 5, fill: colors[main], stroke: "var(--panel)", "stroke-width": 2, opacity: 0 }); svg.append(mk);
   const gt = s("text", { y: T + 9, class: "gt", opacity: 0 }); svg.append(gt);
   const legend = h("div", { class: "legend num" });
   const fill = (d) => legend.replaceChildren(h("span", { class: "mute" }, d.slice(5).replace("-", "/")), ...keys.map((k) => { const p = series[k].find((q) => q[0] === d) || series[k][series[k].length - 1];
-    const yenVal = d === dates[dates.length - 1] ? D.accounts[0].value - capital : p[1] * capital / 100; // 最新日は実際の金額(割合からの換算だと数円ずれる)
+    const yenVal = d === dates[dates.length - 1] ? D.accounts.find((a) => a.key === k).value - capital : p[1] * capital / 100; // 最新日は実際の金額(割合からの換算だと数円ずれる)
     return h("span", null, h("i", { style: `background:${colors[k]}` }), `${names[k]} `, h("b", { class: signCls(p[1]) }, `${signYen(yenVal)} (${pct(p[1])})`)); }));
   fill(dates[dates.length - 1]);
   const show = (ev) => { const r = svg.getBoundingClientRect(), px = ((ev.clientX - r.left) / r.width) * W;
     const i = Math.max(0, Math.min(dates.length - 1, dates.length < 2 ? 0 : Math.round(((px - L) / (W - L - R)) * (dates.length - 1)))); const d = dates[i];
     guide.setAttribute("x1", x(d)); guide.setAttribute("x2", x(d)); guide.setAttribute("opacity", 1); fill(d);
-    const p = series.live.find((q) => q[0] === d);
+    const p = series[main].find((q) => q[0] === d);
     if (p) { mk.setAttribute("cx", x(d)); mk.setAttribute("cy", y(p[1])); mk.setAttribute("opacity", 1); }
     gt.textContent = d.slice(5).replace("-", "/"); gt.setAttribute("x", x(d) + (i > dates.length / 2 ? -6 : 6)); gt.setAttribute("text-anchor", i > dates.length / 2 ? "end" : "start"); gt.setAttribute("opacity", 1); };
   svg.addEventListener("pointerdown", show); svg.addEventListener("pointermove", show);
@@ -562,22 +591,23 @@ function holdingRow(key, name, sub, pnl, pctVal, detail) {
     h("div", { class: `r num ${signCls(pnl)}` }, h("div", { class: "pnl" }, pnl ? h("span", { class: "arw" }, pnl > 0 ? "▲" : "▼") : null, signYen(pnl)), h("small", null, pct(pctVal))));
   return open ? [row, detail] : row;
 }
-function holdDetail(cells, code, withRecord) {
+function holdDetail(cells, code, withRecord, why) {
   const go = (kind) => () => { prefill = { kind, ticker: code }; tab = "record"; render(); window.scrollTo(0, 0); };
   return h("div", { class: "det" }, h("div", { class: "g num" }, cells.map(([l, v]) => h("div", null, h("small", null, l), v))),
+    why ? h("p", { class: "why1" }, h("small", null, "買った理由"), why.replace(/【株価は.*$/, "")) : null,
     h("div", { class: "acts" }, h("a", { class: "btn", href: yahooUrl(code), target: "_blank", rel: "noopener" }, "Yahoo"),
       withRecord ? [h("button", { class: "btn", onclick: go("buy") }, "買い増しを記録"), h("button", { class: "btn", onclick: go("sell") }, "売りを記録")] : null,
       h("button", { class: "btn", onclick: () => { htab = "news"; drawHome(); } }, "ニュース")));
 }
 function bodyHold(D) {
-  if (scope === "claude") {
-    const a = D.accounts[0];
+  if (scope !== "me") {
+    const a = acctOf(D);
     return h("div", null, h("div", { class: "hd two" }, h("span", null, "銘柄 / 評価額"), h("span", { style: "text-align:right" }, "損益")),
-      a.holdings.length ? a.holdings.map((p) => { const bought = D.fills.filter((f) => f.name === p.name && f.side === "buy").map((f) => f.date).sort().pop();
+      a.holdings.length ? a.holdings.map((p) => { const buy = D.fills.find((f) => f.key === a.key && f.name === p.name && f.side === "buy"), bought = p.bought_on || (buy && buy.date);
         return holdingRow(p.ticker, p.name, `${p.shares}株 · 評価 ${yen(p.price * p.shares)}`, (p.price - p.entry) * p.shares, p.pct,
-          holdDetail([["取得単価", one1(p.entry)], ["現在値", one1(p.price)], ["取得日", bought ? bought.slice(5).replace("-", "/") : "-"]], shortCode(p.ticker), true)); }) : h("div", { class: "none" }, "保有なし", h("small", null, "Claudeが買うと、ここに並びます")),
-      a.pending.map((o) => h("div", { class: "tr two" }, h("div", { class: "nm" }, h("span", { class: `tag ${o.side}` }, o.side === "buy" ? "買" : "売"), `${o.name} ${o.shares}株`), h("small", { class: "r" }, o.reason))),
-      null);
+          holdDetail([["取得単価", one1(p.entry)], ["現在値", one1(p.price)], ["損切りライン", p.stop ? one1(p.stop) : "-"], ["取得日", bought ? bought.slice(5).replace("-", "/") : "-"]], shortCode(p.ticker), false, buy && buy.reason)); }) : h("div", { class: "none" }, "保有なし", h("small", null, "Claudeが買うと、ここに並びます")),
+      a.pending.length ? h("div", { class: "sec" }, "あすの寄付きの注文(仮想)") : null,
+      a.pending.map((o) => h("div", { class: "tr two" }, h("div", { class: "nm" }, h("span", { class: `tag ${o.side}` }, o.side === "buy" ? "買" : "売"), `${o.name} ${o.shares}株`), h("small", { class: "r" }, o.reason))));
   }
   const s = cache.realState || { holdings: {}, cash: 0 }, info = {}; (D.real || []).forEach((r) => { info[r.ticker] = r; });
   const hs = Object.entries(s.holdings || {}), sells = cache.trades.filter((t) => t.side === "sell").slice(0, 5);
@@ -590,8 +620,11 @@ function bodyHold(D) {
       h("small", { class: "num" }, "@" + t.price.toLocaleString("ja-JP")), h("div", { class: `r num ${signCls(t.pnl)}` }, h("div", { class: "pnl" }, signYen(t.pnl)), h("small", null, "諸経費込み"))))] : null);
 }
 function bodyFills(D) {
-  if (scope === "claude") return D.fills.length ? h("div", { class: "pad" }, D.fills.map((f) => h("div", { class: "row" },
-    h("span", null, h("span", { class: `tag ${f.side}` }, f.side === "buy" ? "買" : "売"), `${f.name} ${f.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, f.date.slice(5).replace("-", "/"))), h("span", { class: "num" }, one1(f.price))))) : h("div", { class: "none" }, "まだ約定がありません", h("small", null, "Claudeの注文が約定すると、ここに出ます"));
+  if (scope !== "me") { const fl = D.fills.filter((f) => f.key === scope).slice(0, 15);
+    return fl.length ? h("div", { class: "pad" }, fl.map((f) => h("div", { class: "frow" }, h("div", { class: "row" },
+      h("span", null, h("span", { class: `tag ${f.side}` }, f.side === "buy" ? "買" : "売"), `${f.name} ${f.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, f.date.slice(5).replace("-", "/") + (f.time ? ` ${f.time}` : ""))),
+      h("span", { class: "num" }, one1(f.price), f.side === "sell" && f.realized ? h("small", { class: signCls(f.realized), style: "margin-left:6px" }, signYen(Number(f.realized))) : null)),
+      f.reason ? h("small", { class: "mute" }, f.reason.replace(/【株価は.*$/, "")) : null))) : h("div", { class: "none" }, "まだ約定がありません", h("small", null, "Claudeの注文が約定すると、ここに出ます")); }
   return cache.trades.length ? h("div", { class: "pad" }, cache.trades.slice(0, 10).map((t) => h("div", { class: "row" },
     h("span", null, h("span", { class: `tag ${t.side}` }, t.side === "buy" ? "買" : "売"), `${nameOfTicker(t.ticker)} ${t.shares}株`, h("small", { class: "mute num", style: "margin-left:6px" }, t.date.slice(5).replace("-", "/"))),
     h("span", { class: "num" }, one1(t.price))))) : h("div", { class: "none" }, "まだ記録がありません", h("small", null, "記録タブから売買を記録できます"));
